@@ -24,8 +24,4 @@ G = par.read_dataset(G, karate_path)
 
 partitions = par.random_shuffle(G, n_partitions, k_param)
 
-for elem in partitions:
-    print(elem)
-    print()
-
 par.write_partitions(partitions, n_partitions, k_param)

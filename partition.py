@@ -2,14 +2,16 @@ import random
 import os
 from datetime import datetime
 
-def split_list(ls, num):
-    '''Splits list in num part'''
+def split_list(ls, n):
+    '''Splits list in n part'''
 
-    x = len(ls)//num # number of nodes in every partition
+    x = len(ls)//n # number of nodes in every partition
 
     p = [ls[i:i + x] for i in range(0, len(ls), x)]
 
-    if len(ls) % num != 0:
+    # if last partion has less elements than other partitions,
+    # it's elems are moved to other partitions
+    if len(ls) % n != 0:
         it = 0
         for elem in p[-1]:
             p[it].append(elem)
@@ -17,6 +19,21 @@ def split_list(ls, num):
         del p[-1]
 
     return p
+
+def create_dict_from_nodes_ls(G, nodes_list):
+    '''Takes every node in partition and creates dictionary.
+    Key is node label and value is list of it's neighbors'''
+
+    partitions = []
+    node_dict = {}
+
+    for i in range(len(nodes_list)):
+            for node in nodes_list[i]:
+                node_dict[node] = list(G.neighbors(node))
+            partitions.append(node_dict.copy())
+            node_dict.clear()
+
+    return partitions
 
 def read_dataset(G, dataset_path):
     '''Reads dataset from file and save to networkx graph'''
@@ -37,10 +54,10 @@ def read_dataset(G, dataset_path):
 
 def random_shuffle(G, n_partitions, k = 1):
     '''Gets list of nodes in a graph and creates a list of neighbors
-    for every node. Using that list of graph partitions is created.'''
+    for every node. Using that list of graph partitions is created.
+    
+    k = number of copies of each node'''
 
-    partitions = []
-    nodes_dict = {}
     nodes_list = list(G.nodes)
 
     random.seed(16)
@@ -48,17 +65,42 @@ def random_shuffle(G, n_partitions, k = 1):
     
     if k == 1:
         nodes_list = split_list(nodes_list, n_partitions)
-        for i in range(len(nodes_list)):
-            for node in nodes_list[i]:
-                nodes_dict[node] = list(G.neighbors(node))
-            partitions.append(nodes_dict.copy())
-            nodes_dict.clear()
     else:
-        for i in range(n_partitions):
-            partitions.append([])
+        nodes_list = clone_nodes(nodes_list, n_partitions, k)
+
+    partitions = create_dict_from_nodes_ls(G, nodes_list)
         
-    
     return partitions
+    
+def clone_nodes(nodes_list, n_partitions, k):
+    '''Clones nodes to each partition. Each node is cloned k times 
+    and there isn't any partition with duplicates'''
+
+    ls = []
+    for i in range(n_partitions):
+        ls.append([])
+
+    for node in nodes_list:
+        it = k
+        for id in range(it):
+            id_min = find_min_num_partiton(ls)
+            if node not in ls[id_min]:
+                ls[id_min].append(node)
+
+    return ls
+            
+def find_min_num_partiton(partitions):
+    '''Finds partition with minimun number of nodes'''
+
+    minimum = len(partitions[0])
+    id_min = 0
+
+    for id in range(len(partitions)):
+        if minimum >= len(partitions[id]):
+            minimum = len(partitions[id])
+            id_min = id
+
+    return id_min
 
 def write_partitions(partitions, n_partitions, k_param):
     '''Saves every partition to different file, labeled with different id'''
@@ -74,7 +116,7 @@ def write_partitions(partitions, n_partitions, k_param):
     dir_name += "_K=" + str(k_param) + '\\'
     os.mkdir(dir_name)
 
-    for id in range(n_partitions):
+    for id in range(len(partitions)):
         with open(dir_name + str(id) + '.txt', 'w+') as f:
             for node, adj_list in partitions[id].items():
                 f_line = node + ','
