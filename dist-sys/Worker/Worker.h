@@ -24,7 +24,7 @@ class Worker
 		int sockfd;
 		sockaddr_in sockAddr;
 		map<int, vector<int>> nodes;
-		vector<int> workersSockfd;
+		vector<sockaddr_in> workersSockAddr;
 	
 	public:
 	
@@ -35,8 +35,10 @@ class Worker
 		int getSockfd() { return sockfd; }
 		sockaddr_in getSockAddr() { return sockAddr; }
 		map<int, vector<int>> getNodes() { return nodes; }
-		vector<int> getWorkersSockfd() { return workersSockfd; }
+		vector<sockaddr_in> getWorkersSockAddr() { return workersSockAddr; }
 
-		void initWorkerSockets();
+		void setWorkersSockAddr();
 		void LoadNodesData(string path);
+
+		void broadcastNodeInfo();
 };

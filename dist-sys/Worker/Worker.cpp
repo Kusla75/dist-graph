@@ -24,25 +24,24 @@ Worker::Worker(int workerId, int numWorkers) {
 
 	this->nodes = map<int, vector<int>>();
 
-	this->workersSockfd = vector<int>();
+	this->workersSockAddr = vector<sockaddr_in>();
 }
 
-void Worker::initWorkerSockets() {
-	int sockfdTmp;
+void Worker::setWorkersSockAddr() {
 	sockaddr_in addrTmp;
 	addrTmp.sin_family = AF_INET;
 
+	// Create list of workers ip and port
 	for (int i = 0; i < numWorkers; ++i) {
-		if (i != id) {
-			if ((sockfdTmp = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-			{
-				cout << "Socket " << i << " creation failed" << endl;
-				exit(EXIT_FAILURE);
-			}
+		addrTmp.sin_port = 8080 + i;
 
-			addrTmp.sin_port = 8080 + i;
-			if
+		if (inet_pton(AF_INET, "127.0.0.1", &addrTmp.sin_addr) <= 0)
+		{
+			cout << "Invalid address for " << i << " worker" << endl;
+			exit(EXIT_FAILURE);
 		}
+
+		workersSockAddr.push_back(addrTmp);
 	}
 }
 
@@ -74,3 +73,19 @@ void Worker::LoadNodesData(string path) {
 	}
 }
 
+void Worker::broadcastNodeInfo() {
+	string message = "Hi from me";
+	char buffer[1024] = {0};
+	int sock = 0;
+
+	for (int i = 0; i < numWorkers; ++i) {
+		if (i != id) {
+			sock = socket(AF_INET, SOCK_STREAM, 0);
+			connect(sock, (struct sockaddr*)&workersSockAddr[i], sizeof(workersSockAddr[i]));
+			send(sock, &message[0], message.length(), 0);
+			read(sock, buffer, 1024);
+			printf("%s\n", buffer);
+			close(sock);
+		}
+	}
+}
