@@ -71,7 +71,10 @@ def random_shuffle(G, n_partitions, k = 1):
     partitions = create_dict_from_nodes_ls(G, nodes_list)
         
     return partitions
-    
+
+def node_deg_partitioning(G, n_partitions, k = 1):
+    pass
+
 def clone_nodes(nodes_list, n_partitions, k):
     '''Clones nodes to each partition. Each node is cloned k times 
     and there isn't any partition with duplicates'''
@@ -112,8 +115,8 @@ def write_partitions(partitions, n_partitions, k_param):
     now_time = now_time.strftime("%d-%m-%Y_%H.%M.%S")
 
     dir_name = path + now_time 
-    dir_name += "_N=" + str(n_partitions) + "_"
-    dir_name += "_K=" + str(k_param) + '\\'
+    dir_name += "_N" + str(n_partitions) + "_"
+    dir_name += "K" + str(k_param) + '\\'
     os.mkdir(dir_name)
 
     for id in range(len(partitions)):
@@ -124,5 +127,3 @@ def write_partitions(partitions, n_partitions, k_param):
                     f_line += ' ' + n
                 f_line += '\n'
                 f.write(f_line)
-                
-    
