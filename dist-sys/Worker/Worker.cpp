@@ -1,35 +1,49 @@
 #include "Worker.h"
 
-Worker::Worker() {
-	this->id = 0;
-	this->address = "127.0.0.1";
-	this->port = 8080;
+Worker::Worker(int workerId, int numWorkers) {
+	this->id = workerId;
+	this->numWorkers = numWorkers;
+
+	// Bind socket init ------
+
+	this->sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (this->sockfd == 0) {
+		cout << "Socket creation failed" << endl;
+		exit(EXIT_FAILURE);
+	}
+
+	sockAddr.sin_family = AF_INET;
+	sockAddr.sin_addr.s_addr = INADDR_ANY;
+	sockAddr.sin_port = 8080 + workerId;
+
+	int bindStatus = bind(sockfd, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
+	if (bindStatus < 0) {
+		cout << "Binding failed" << endl;
+		exit(EXIT_FAILURE);
+	}
+
 	this->nodes = map<int, vector<int>>();
-	this->workerAddr = vector<string>();
-	this->workerPort = vector<int>();
+
+	this->workersSockfd = vector<int>();
 }
 
-Worker::Worker(int id, string address, int port, map<int, vector<int>> nodes,
-	vector<string> workerAddr, vector<int> workerPort) {
+void Worker::initWorkerSockets() {
+	int sockfdTmp;
+	sockaddr_in addrTmp;
+	addrTmp.sin_family = AF_INET;
 
-	this->id = id;
-	this->address = address;
-	this->port = port;
-	this->nodes = nodes;
-	this->workerAddr = workerAddr;
-	this->workerPort = workerPort;
-}
+	for (int i = 0; i < numWorkers; ++i) {
+		if (i != id) {
+			if ((sockfdTmp = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+			{
+				cout << "Socket " << i << " creation failed" << endl;
+				exit(EXIT_FAILURE);
+			}
 
-void Worker::setId(int id) { this->id = id; }
-void Worker::setAddress(string address) { this->address = address; }
-void Worker::setPort(int port) { this->port = port; }
-void Worker::setNodes(map<int, vector<int>> nodes) { this->nodes = nodes; }
-void Worker::setWorkerAddr(vector<string> workerAddr) { this->workerAddr = workerAddr; }
-void Worker::setWorkerPort(vector<int> workerPort) { this->workerPort = workerPort; }
-
-void Worker::GenerateWorkerPort() {
-	int portPrefix = 8080;
-	port = portPrefix + id;
+			addrTmp.sin_port = 8080 + i;
+			if
+		}
+	}
 }
 
 void Worker::LoadNodesData(string path) {
@@ -52,11 +66,11 @@ void Worker::LoadNodesData(string path) {
 
 		while (std::getline(ss, tmp, ' '))
 		{
-			nodeNeighbors.push_back(std::stoi(tmp)); // save node neighbor to vector
+			nodeNeighbors.push_back(std::stoi(tmp)); // save node neighbors to vector
 		}
 
 		nodes.insert(std::pair<int, std::vector<int>>(node, nodeNeighbors));
 		nodeNeighbors.clear();
-
 	}
 }
+

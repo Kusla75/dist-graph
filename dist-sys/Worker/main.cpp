@@ -8,28 +8,28 @@
 #include "Worker.h"
 #define PORT 8080
 
+string dataPath = "/home/nikola/partitions/N3_K1";
+
+//  Command line arg: Number of workers, WorkerId, Other
+
 int main(int argc, char* argv[])
 {
-    if (atoi(argv[2]) == 0)
-    {
-        string dataPath = "/home/nikola/partitions/N3_K1";
+    int workerId = atoi(argv[2]);
+    int numWorkers = atoi(argv[1]);
 
-        Worker w;
+    Worker w(workerId, numWorkers);
+    w.LoadNodesData(dataPath);
+
+    if (workerId == 0)
+    {
         int sockfd = 0;
         sockaddr_in server_addr;
         string message = "Hello from " + std::to_string(w.getId());
-
-        w.setId(atoi(argv[1]));
-        w.GenerateWorkerPort();
-        w.LoadNodesData(dataPath);
 
         if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
             std::cout << "Socket creation error" << std::endl;
             return -1;
         }
-
-        server_addr.sin_family = AF_INET;
-        server_addr.sin_port = w.getPort();
 
         if (inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr) <= 0)
         {
