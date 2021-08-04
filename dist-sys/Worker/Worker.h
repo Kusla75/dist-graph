@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#define BUFFERSIZE 1024
 
 using namespace std;
 
@@ -37,11 +38,14 @@ class Worker
 		int getSockfd() { return sockfd; }
 		sockaddr_in getSockAddr() { return sockAddr; }
 		map<int, vector<int>> getNodes() { return nodes; }
+		map<int, vector<int>> getOtherWorkersNodes() { return otherWorkersNodes; }
 		vector<sockaddr_in> getWorkersSockAddr() { return workersSockAddr; }
 
 		void setWorkersSockAddr();
+		void addToOtherWorkersNodes(pair<int, vector<int>> p);
 		void LoadNodesData(string path);
 
 		static void broadcastNodeInfo(Worker w);
 		static void sendDataToWorker(Worker w, int workerId, int* data, int dataLen);
+		static void recvWorkersNodeInfo(Worker& w);
 };

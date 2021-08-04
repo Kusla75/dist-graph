@@ -46,30 +46,34 @@ void Worker::setWorkersSockAddr() {
 	}
 }
 
+void Worker::addToOtherWorkersNodes(pair<int, vector<int>> p) {
+	otherWorkersNodes.insert(p);
+}
+
 void Worker::LoadNodesData(string path) {
-	std::string line;
+	string line;
 	int node = 0;
-	std::vector<int> nodeNeighbors;
+	vector<int> nodeNeighbors;
 
-	path = path + "/" + std::to_string(id) + ".txt";
-	std::ifstream f(path);
+	path = path + "/" + to_string(id) + ".txt";
+	ifstream f(path);
 
-	while (std::getline(f, line)) {
+	while (getline(f, line)) {
 		string str1 = line.substr(0, line.find(",")); // str1 holds node
 		string str2 = line.substr(line.find(",") + 2); // str2 holds neighbors of node
-		str2.erase(std::remove(str2.begin(), str2.end(), '\r'), str2.end()); // remove /r from string
+		str2.erase(remove(str2.begin(), str2.end(), '\r'), str2.end()); // remove /r from string
 
-		node = std::stoi(str1);
+		node = stoi(str1);
 
-		std::stringstream ss(str2);
-		std::string tmp;
+		stringstream ss(str2);
+		string tmp;
 
-		while (std::getline(ss, tmp, ' '))
+		while (getline(ss, tmp, ' '))
 		{
-			nodeNeighbors.push_back(std::stoi(tmp)); // save node neighbors to vector
+			nodeNeighbors.push_back(stoi(tmp)); // save node neighbors to vector
 		}
 
-		nodes.insert(std::pair<int, std::vector<int>>(node, nodeNeighbors));
+		nodes.insert(pair<int, vector<int>>(node, nodeNeighbors));
 		nodeNeighbors.clear();
 	}
 }
@@ -101,10 +105,30 @@ void Worker::broadcastNodeInfo(Worker w) {
 	vector<thread> threads;
 	for (i = 0; i < w.getNumWorkers(); ++i) {
 		if (i != w.getId()) {
-			threads.push_back(thread(Worker::sendDataToWorker, w, i, &buffer[0], len));
+			threads.push_back(thread(Worker::sendDataToWorker, ref(w), i, &buffer[0], len));
 		}
 	}
 	for (i = 0; i < w.getNumWorkers()-1; ++i) {
 		threads[i].join();
+	}
+}
+
+void Worker::recvWorkersNodeInfo(Worker& w) {
+	int buffer[BUFFERSIZE];
+	sockaddr_in address = w.getSockAddr();
+	int addrLen = sizeof(w.getSockAddr());
+	int sock;
+
+	listen(w.getSockfd(), 5);
+	for (int n = 0; n < w.getNumWorkers() - 1; ++n)
+	{
+		sock = accept(w.getSockfd(), (sockaddr*)&address, (socklen_t*)&addrLen);
+		int byteSize = recv(sock, buffer, BUFFERSIZE, 0);
+		int len = byteSize / sizeof(int);
+
+		vector<int> tempVec(buffer + 1, buffer + len);
+		w.addToOtherWorkersNodes(pair<int, vector<int>>(buffer[0], tempVec));
+
+		close(sock);
 	}
 }
