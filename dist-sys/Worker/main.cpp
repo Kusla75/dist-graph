@@ -29,4 +29,15 @@ int main(int argc, char* argv[])
     Worker::recvWorkersNodeInfo(w);
     sendBroadCastTr.join();
 
+    /*thread clusteringCoeffTr(Worker::calculateClusteringCoeff, ref(w));
+
+    clusteringCoeffTr.join();*/
+
+    thread recvNodeNeighborsRequestTr(Worker::recvNodeNeighborsRequest, w);
+
+    Worker::calculateClusteringCoeff(w);
+
+    recvNodeNeighborsRequestTr.join();
+
+    cout << endl;
 }

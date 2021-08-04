@@ -23,6 +23,7 @@ Worker::Worker(int workerId, int numWorkers) {
 	}
 
 	this->nodes = map<int, vector<int>>();
+	this->clusteringCoeff = map<int, float>();
 	this->otherWorkersNodes = map<int, vector<int>>();
 
 	this->workersSockAddr = vector<sockaddr_in>();
@@ -44,10 +45,6 @@ void Worker::setWorkersSockAddr() {
 
 		workersSockAddr.push_back(addrTmp);
 	}
-}
-
-void Worker::addToOtherWorkersNodes(pair<int, vector<int>> p) {
-	otherWorkersNodes.insert(p);
 }
 
 void Worker::LoadNodesData(string path) {
@@ -73,6 +70,7 @@ void Worker::LoadNodesData(string path) {
 			nodeNeighbors.push_back(stoi(tmp)); // save node neighbors to vector
 		}
 
+		sort(nodeNeighbors.begin(), nodeNeighbors.end());
 		nodes.insert(pair<int, vector<int>>(node, nodeNeighbors));
 		nodeNeighbors.clear();
 	}
@@ -114,7 +112,7 @@ void Worker::broadcastNodeInfo(Worker w) {
 }
 
 void Worker::recvWorkersNodeInfo(Worker& w) {
-	int buffer[BUFFERSIZE];
+	int buffer[SIZE];
 	sockaddr_in address = w.getSockAddr();
 	int addrLen = sizeof(w.getSockAddr());
 	int sock;
@@ -123,12 +121,106 @@ void Worker::recvWorkersNodeInfo(Worker& w) {
 	for (int n = 0; n < w.getNumWorkers() - 1; ++n)
 	{
 		sock = accept(w.getSockfd(), (sockaddr*)&address, (socklen_t*)&addrLen);
-		int byteSize = recv(sock, buffer, BUFFERSIZE, 0);
+		int byteSize = recv(sock, buffer, SIZE, 0);
 		int len = byteSize / sizeof(int);
 
 		vector<int> tempVec(buffer + 1, buffer + len);
-		w.addToOtherWorkersNodes(pair<int, vector<int>>(buffer[0], tempVec));
+		sort(tempVec.begin(), tempVec.end());
+		w.getOtherWorkersNodes().insert(pair<int, vector<int>>(buffer[0], tempVec));
 
 		close(sock);
+	}
+}
+
+vector<int> Worker::requestNodeNeighbors(Worker w, int node) {
+	int workerId = 0;
+
+	// Searches which worker to contanct to request data
+	for (auto pair : w.getOtherWorkersNodes()) {
+		if (binary_search(pair.second.begin(), pair.second.end(), node)) {
+			workerId = pair.first;
+			break;
+		}
+	}
+
+	int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+	sockaddr_in sockAddr = w.getWorkersSockAddr()[workerId];
+	connect(sock, (sockaddr*)&sockAddr, sizeof(sockAddr));
+
+	int buffer[SIZE];
+	send(sock, &node, sizeof(node), 0);
+	int byteSize = recv(sock, buffer, SIZE, 0);
+	int len = byteSize / sizeof(int);
+	close(sock);
+
+	vector<int> nodeNeighbors(buffer, buffer + len);
+	return nodeNeighbors;
+}
+
+void Worker::recvNodeNeighborsRequest(Worker w) {
+	int buffer[SIZE];
+	sockaddr_in address = w.getSockAddr();
+	int addrLen = sizeof(w.getSockAddr());
+	int sock;
+	vector<int> tempVec;
+
+	while (true) {
+		listen(w.getSockfd(), 5);
+		sock = accept(w.getSockfd(), (sockaddr*)&address, (socklen_t*)&addrLen);
+		recv(sock, buffer, SIZE, 0);
+
+		tempVec = w.getNodes()[buffer[0]];
+		send(sock, tempVec.data(), tempVec.size()*sizeof(int), 0);
+	}
+
+	close(sock);
+}
+
+void Worker::calculateClusteringCoeff(Worker& w) {
+	int node;
+	int neighbor;
+	int neighborsEdges = 0;
+	int numNeighbors = 0;
+	float coeff = 0;
+	int totalneighborEdges = 0;
+	vector<int> neighborNeighbors;
+
+	for (auto pr : w.getNodes()) {
+		node = pr.first;
+		numNeighbors = pr.second.size();
+
+		neighborsEdges = 0;
+		totalneighborEdges = (numNeighbors * (numNeighbors - 1)) / 2;
+
+		for (int i = 0; i < numNeighbors; ++i) {
+
+			neighbor = pr.second[i];
+
+			// Check if worker has node in memory
+			if (w.getNodes().find(neighbor) == w.getNodes().end()) {
+				// not found
+				neighborNeighbors = requestNodeNeighbors(w, neighbor);
+
+				for (int j = i + 1; j < numNeighbors; ++j) {
+
+					if (binary_search(neighborNeighbors.begin(), neighborNeighbors.end(), pr.second[j])) {
+						neighborsEdges++;
+					}
+				}
+			}
+			else {
+				// found
+				for (int j = i + 1; j < numNeighbors; ++j) {
+
+					if (binary_search(w.getNodes()[neighbor].begin(), w.getNodes()[neighbor].end(), pr.second[j])) {
+						neighborsEdges++;
+					}
+				}
+			}
+		}
+		
+		coeff = (float)neighborsEdges / (float)totalneighborEdges;
+		w.getClusteringCoeff().insert(pair<int, float>(node, coeff));
 	}
 }
