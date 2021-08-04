@@ -23,6 +23,7 @@ Worker::Worker(int workerId, int numWorkers) {
 	}
 
 	this->nodes = map<int, vector<int>>();
+	this->otherWorkersNodes = map<int, vector<int>>();
 
 	this->workersSockAddr = vector<sockaddr_in>();
 }
@@ -73,19 +74,37 @@ void Worker::LoadNodesData(string path) {
 	}
 }
 
-void Worker::broadcastNodeInfo() {
-	string message = "Hi from me";
-	char buffer[1024] = {0};
-	int sock = 0;
+void Worker::sendDataToWorker(Worker w, int workerId, int* data, int dataLen) {
+	int val = -1;
+	int sock = socket(AF_INET, SOCK_STREAM, 0);
 
-	for (int i = 0; i < numWorkers; ++i) {
-		if (i != id) {
-			sock = socket(AF_INET, SOCK_STREAM, 0);
-			connect(sock, (struct sockaddr*)&workersSockAddr[i], sizeof(workersSockAddr[i]));
-			send(sock, &message[0], message.length(), 0);
-			read(sock, buffer, 1024);
-			printf("%s\n", buffer);
-			close(sock);
+	sockaddr_in sockAddr = w.getWorkersSockAddr()[workerId];
+	while (val < 0) {
+		val = connect(sock, (sockaddr*) &sockAddr, sizeof(sockAddr));
+	}
+	send(sock, data, dataLen, 0);
+	close(sock);
+}
+
+void Worker::broadcastNodeInfo(Worker w) {
+
+	// buffer stores id of worker and nodes that it has
+	int len = (w.getNodes().size() + 1)*sizeof(int);
+	int buffer[len];
+	buffer[0] = w.getId();
+
+	int i = 1;
+	for (const auto& nodesPair : w.getNodes()){
+		buffer[i++] = nodesPair.first;
+	}
+
+	vector<thread> threads;
+	for (i = 0; i < w.getNumWorkers(); ++i) {
+		if (i != w.getId()) {
+			threads.push_back(thread(Worker::sendDataToWorker, w, i, &buffer[0], len));
 		}
+	}
+	for (i = 0; i < w.getNumWorkers()-1; ++i) {
+		threads[i].join();
 	}
 }

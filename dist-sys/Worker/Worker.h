@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <sstream>
+#include <thread>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -24,6 +25,7 @@ class Worker
 		int sockfd;
 		sockaddr_in sockAddr;
 		map<int, vector<int>> nodes;
+		map<int, vector<int>> otherWorkersNodes;
 		vector<sockaddr_in> workersSockAddr;
 	
 	public:
@@ -40,5 +42,6 @@ class Worker
 		void setWorkersSockAddr();
 		void LoadNodesData(string path);
 
-		void broadcastNodeInfo();
+		static void broadcastNodeInfo(Worker w);
+		static void sendDataToWorker(Worker w, int workerId, int* data, int dataLen);
 };
