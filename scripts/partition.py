@@ -19,7 +19,7 @@ def split_list(ls, n):
 
     return p
 
-def create_dict_from_nodes_ls(G, nodes_list):
+def create_partitions_dict(G, nodes_list):
     '''Takes every node in partition and creates dictionary.
     Key is node label and value is list of it's neighbors'''
 
@@ -27,10 +27,10 @@ def create_dict_from_nodes_ls(G, nodes_list):
     node_dict = {}
 
     for i in range(len(nodes_list)):
-            for node in nodes_list[i]:
-                node_dict[node] = list(G.neighbors(node))
-            partitions.append(node_dict.copy())
-            node_dict.clear()
+        for node in nodes_list[i]:
+            node_dict[node] = list(G.neighbors(node))
+        partitions.append(node_dict.copy())
+        node_dict.clear()
 
     return partitions
 
@@ -51,7 +51,7 @@ def read_dataset(G, dataset_path):
 
     return G
 
-def random_shuffle(G, n_partitions, k = 1):
+def random_partitioning(G, n_partitions, k = 1):
     '''Gets list of nodes in a graph and creates a list of neighbors
     for every node. Using that list of graph partitions is created.
     
@@ -62,46 +62,45 @@ def random_shuffle(G, n_partitions, k = 1):
     random.seed(16)
     random.shuffle(nodes_list)
     
-    if k == 1:
-        nodes_list = split_list(nodes_list, n_partitions)
-    else:
-        nodes_list = clone_nodes(nodes_list, n_partitions, k)
+    partitions = split_list(nodes_list, n_partitions)
+    
+    if k > 1:
+        partitions = clone_nodes_by_par_size(G, partitions, n_partitions, k-1)
 
-    partitions = create_dict_from_nodes_ls(G, nodes_list)
+    partitions = bad_sort(partitions) # Slow to execute
+
+    partitions = create_partitions_dict(G, partitions)
         
     return partitions
 
 def node_deg_partitioning(G, n_partitions, k = 1):
     pass
 
-def clone_nodes(nodes_list, n_partitions, k):
+def clone_nodes_by_par_size(G, partitions, n_partitions, k):
     '''Clones nodes to each partition. Each node is cloned k times 
-    and there isn't any partition with duplicates'''
+    and there isn't any partition with duplicate nodes. Each partition will have
+    approximately same number of nodes.'''
 
-    ls = []
-    for i in range(n_partitions):
-        ls.append([])
+    for node in list(G.nodes):
+        it = 0
+        while it < k:
+            id_min = find_min_num_partiton_without_node(partitions, node)
+            partitions[id_min].append(node)
+            it += 1
 
-    for node in nodes_list:
-        it = k
-        while it > 0:
-            id_min = find_min_num_partiton(ls)
-            if node not in ls[id_min]:
-                ls[id_min].append(node)
-            it -= 1
+    return partitions
+  
+def find_min_num_partiton_without_node(partitions, node):
+    '''Finds partition with minimum number of nodes 
+    that doesn't have a given node in it. Returns id of that partition.'''
 
-    return ls
-            
-def find_min_num_partiton(partitions):
-    '''Finds partition with minimun number of nodes'''
-
-    minimum = len(partitions[0])
+    min_size = 999999999
     id_min = 0
 
-    for id in range(len(partitions)):
-        if minimum >= len(partitions[id]):
-            minimum = len(partitions[id])
-            id_min = id
+    for i in range(len(partitions)):
+        if min_size >= len(partitions[i]) and node not in partitions[i]:
+            min_size = len(partitions[i])
+            id_min = i
 
     return id_min
 
@@ -119,13 +118,29 @@ def write_partitions(partitions, ds_name, n_partitions, k):
 
     dir_name = path + "\\N" + str(n_partitions) + "_"
     dir_name += "K" + str(k) + '\\'
-    os.mkdir(dir_name)
+    if not os.path.exists(dir_name):
+        os.mkdir(dir_name)
 
-    for id in range(len(partitions)):
-        with open(dir_name + str(id) + '.txt', 'w+') as f:
-            for node, adj_list in partitions[id].items():
+    for i in range(len(partitions)):
+        with open(dir_name + str(i) + '.txt', 'w+') as f:
+            for node, adj_list in partitions[i].items():
                 f_line = node + ','
                 for n in adj_list:
                     f_line += ' ' + n
                 f_line += '\n'
                 f.write(f_line)
+
+def bad_sort(partitions):
+    '''This sort function is bad because it has to convert elems from str to int,
+    sort and then convert elems back from int to str. Bad!!!'''
+
+    ls = []
+    for i in range(len(partitions)):
+        ls.append([int(n) for n in partitions[i]])
+    for elem in ls:
+        elem.sort()
+    partitions = []
+    for i in range(len(ls)):
+        partitions.append([str(n) for n in ls[i]])
+
+    return partitions
