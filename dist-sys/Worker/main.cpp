@@ -10,7 +10,7 @@
 #include "Worker.h"
 
 using namespace std;
-string dataPath = "/home/nikola/partitions/N4_K1";
+string dataPath = "/home/nikola/partitions/soc-karate/N4_K1";
 
 //  Command-line arg: Number of workers, WorkerId, Other
 

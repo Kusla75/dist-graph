@@ -172,9 +172,8 @@ void Worker::recvNodeNeighborsRequest(Worker w) {
 
 		tempVec = w.getNodes()[buffer[0]];
 		send(sock, tempVec.data(), tempVec.size()*sizeof(int), 0);
+		close(sock);
 	}
-
-	close(sock);
 }
 
 void Worker::calculateClusteringCoeff(Worker& w) {

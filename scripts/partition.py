@@ -1,6 +1,5 @@
 import random
 import os
-from datetime import datetime
 
 def split_list(ls, n):
     '''Splits list in n part'''
@@ -85,10 +84,11 @@ def clone_nodes(nodes_list, n_partitions, k):
 
     for node in nodes_list:
         it = k
-        for id in range(it):
+        while it > 0:
             id_min = find_min_num_partiton(ls)
             if node not in ls[id_min]:
                 ls[id_min].append(node)
+            it -= 1
 
     return ls
             
@@ -105,18 +105,20 @@ def find_min_num_partiton(partitions):
 
     return id_min
 
-def write_partitions(partitions, n_partitions, k_param):
+def write_partitions(partitions, ds_name, n_partitions, k):
     '''Saves every partition to different file, labeled with different id'''
 
-    path = ".\\partitions\\"
+    path = os.path.dirname(__file__)
+    path = os.path.split(path)[0]
+    path += "\\partitions\\" + ds_name
+    
+    if not os.path.exists(path):
+        os.mkdir(path)
+
     f_line = ""
 
-    now_time = datetime.now()
-    now_time = now_time.strftime("%d-%m-%Y_%H.%M.%S")
-
-    dir_name = path + now_time 
-    dir_name += "_N" + str(n_partitions) + "_"
-    dir_name += "K" + str(k_param) + '\\'
+    dir_name = path + "\\N" + str(n_partitions) + "_"
+    dir_name += "K" + str(k) + '\\'
     os.mkdir(dir_name)
 
     for id in range(len(partitions)):
