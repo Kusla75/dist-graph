@@ -14,9 +14,9 @@ Worker::Worker(int workerId, int numWorkers) {
 
 	sockAddr.sin_family = AF_INET;
 	sockAddr.sin_addr.s_addr = INADDR_ANY;
-	sockAddr.sin_port = 8080 + workerId;
+	sockAddr.sin_port = FIX_PORT + workerId;
 
-	int bindStatus = bind(sockfd, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
+	int bindStatus = bind(sockfd, (sockaddr*) &sockAddr, sizeof(sockAddr));
 	if (bindStatus < 0) {
 		cout << "Binding failed" << endl;
 		exit(EXIT_FAILURE);
@@ -35,7 +35,7 @@ void Worker::setWorkersSockAddr() {
 
 	// Create list of workers ip and port
 	for (int i = 0; i < numWorkers; ++i) {
-		addrTmp.sin_port = 8080 + i;
+		addrTmp.sin_port = FIX_PORT + i;
 
 		if (inet_pton(AF_INET, "127.0.0.1", &addrTmp.sin_addr) <= 0)
 		{
@@ -76,34 +76,23 @@ void Worker::LoadNodesData(string path) {
 	}
 }
 
-void Worker::sendDataToWorker(Worker w, int workerId, int* data, int dataLen) {
-	int val = -1;
-	int sock = socket(AF_INET, SOCK_STREAM, 0);
-
-	sockaddr_in sockAddr = w.getWorkersSockAddr()[workerId];
-	while (val < 0) {
-		val = connect(sock, (sockaddr*) &sockAddr, sizeof(sockAddr));
-	}
-	send(sock, data, dataLen, 0);
-	close(sock);
-}
-
 void Worker::broadcastNodeInfo(Worker w) {
 
-	// buffer stores id of worker and nodes that it has
-	int len = (w.getNodes().size() + 1)*sizeof(int);
+	// buffer stores nodes that it has
+	int len = w.getNodes().size() + 1;
 	int buffer[len];
-	buffer[0] = w.getId();
+	buffer[0] = w.getId(); // first int in buffer represents worker id that is sending data
 
+	// read all keys (nodes) from map and store into buffer
 	int i = 1;
-	for (const auto& nodesPair : w.getNodes()){
+	for (auto nodesPair : w.getNodes()){
 		buffer[i++] = nodesPair.first;
 	}
 
 	vector<thread> threads;
 	for (i = 0; i < w.getNumWorkers(); ++i) {
 		if (i != w.getId()) {
-			threads.push_back(thread(Worker::sendDataToWorker, ref(w), i, &buffer[0], len));
+			threads.push_back(thread(Worker::sendNodeInfoToWorker, ref(w), i, &buffer[0], len*sizeof(int)));
 		}
 	}
 	for (i = 0; i < w.getNumWorkers()-1; ++i) {
@@ -111,10 +100,10 @@ void Worker::broadcastNodeInfo(Worker w) {
 	}
 }
 
-void Worker::recvWorkersNodeInfo(Worker& w) {
+void Worker::recvNodeInfo(Worker& w) {
 	int buffer[SIZE];
-	sockaddr_in address = w.getSockAddr();
-	int addrLen = sizeof(w.getSockAddr());
+	sockaddr_in address;
+	int addrLen = sizeof(sockaddr_in);
 	int sock;
 
 	listen(w.getSockfd(), 5);
@@ -126,10 +115,23 @@ void Worker::recvWorkersNodeInfo(Worker& w) {
 
 		vector<int> tempVec(buffer + 1, buffer + len);
 		sort(tempVec.begin(), tempVec.end());
+
 		w.getOtherWorkersNodes().insert(pair<int, vector<int>>(buffer[0], tempVec));
 
 		close(sock);
 	}
+}
+
+void Worker::sendNodeInfoToWorker(Worker w, int workerId, int* data, int dataLen) {
+	int val = -1;
+	int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+	sockaddr_in sockAddr = w.getWorkersSockAddr()[workerId];
+	while (val < 0) {
+		val = connect(sock, (sockaddr*)&sockAddr, sizeof(sockAddr));
+	}
+	send(sock, data, dataLen, 0);
+	close(sock);
 }
 
 vector<int> Worker::requestNodeNeighbors(Worker w, int node) {
@@ -160,8 +162,8 @@ vector<int> Worker::requestNodeNeighbors(Worker w, int node) {
 
 void Worker::recvNodeNeighborsRequest(Worker w) {
 	int buffer[SIZE];
-	sockaddr_in address = w.getSockAddr();
-	int addrLen = sizeof(w.getSockAddr());
+	sockaddr_in address;
+	int addrLen = sizeof(address);
 	int sock;
 	vector<int> tempVec;
 

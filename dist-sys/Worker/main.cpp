@@ -24,10 +24,10 @@ int main(int argc, char* argv[])
     w.LoadNodesData(dataPath); // load graph parition based on id
 
     // Worker broadcasts node that it has to other workers
-    // and receaves info from other nodes
-    thread sendBroadCastTr(Worker::broadcastNodeInfo, w);
-    Worker::recvWorkersNodeInfo(w);
-    sendBroadCastTr.join();
+    // and receaves info from other nodes. TCP is used
+    thread broadcastNodeInfoTr(Worker::broadcastNodeInfo, w);
+    Worker::recvNodeInfo(w);
+    broadcastNodeInfoTr.join();
 
     /*thread clusteringCoeffTr(Worker::calculateClusteringCoeff, ref(w));
 

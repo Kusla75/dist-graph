@@ -13,7 +13,9 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#define SIZE 1024
+
+#define SIZE 4096
+#define FIX_PORT 50000
 
 using namespace std;
 
@@ -21,14 +23,14 @@ class Worker
 {
 	protected:
 
-		int id;
-		int numWorkers;
-		int sockfd;
-		sockaddr_in sockAddr;
-		map<int, vector<int>> nodes;
-		map<int, float> clusteringCoeff;
-		map<int, vector<int>> otherWorkersNodes;
-		vector<sockaddr_in> workersSockAddr;
+		int id;										// id of worker
+		int numWorkers;								// total number of workers in dist system
+		int sockfd;									// file descriptor of socket binded to localhost
+		sockaddr_in sockAddr;						// struct that holds listening port and address family
+		map<int, vector<int>> nodes;				// data that will be used for computation. Holds node and it's neighbors
+		map<int, float> clusteringCoeff;			// map that stores computation results (clustering coefficients of each node)
+		map<int, vector<int>> otherWorkersNodes;	// map that stores other node locations (which worker has which node)
+		vector<sockaddr_in> workersSockAddr;		// socket addresses of other workes
 	
 	public:
 	
@@ -47,8 +49,9 @@ class Worker
 		void LoadNodesData(string path);
 
 		static void broadcastNodeInfo(Worker w);
-		static void sendDataToWorker(Worker w, int workerId, int* data, int dataLen);
-		static void recvWorkersNodeInfo(Worker& w);
+		static void recvNodeInfo(Worker& w);
+
+		static void sendNodeInfoToWorker(Worker w, int workerId, int* data, int dataLen);
 		static vector<int> requestNodeNeighbors(Worker w, int node);
 		static void recvNodeNeighborsRequest(Worker w);
 		static void calculateClusteringCoeff(Worker& w);
