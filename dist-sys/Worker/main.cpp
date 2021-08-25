@@ -10,7 +10,7 @@
 #include "Worker.h"
 
 using namespace std;
-string dataPath = "/home/nikola/partitions/soc-karate/N4_K1";
+string dataPath = "/home/nikola/partitions/fb-pages/N8_K1";
 
 //  Command-line arg: Number of workers, WorkerId, Other
 
@@ -19,25 +19,36 @@ int main(int argc, char* argv[])
     int id = atoi(argv[2]);
     int numWorkers = atoi(argv[1]);
 
-    Worker w(id, numWorkers);
-    w.setWorkersSockAddr(); // set sockaddr of other workers
-    w.LoadNodesData(dataPath); // load graph parition based on id
+    // Init phase
 
-    // Worker broadcasts node that it has to other workers
-    // and receaves info from other nodes. TCP is used
+    Worker w(id, numWorkers);
+    w.createAndBindSock(SOCK_STREAM);
+    w.setWorkersSockAddr(); // set sockaddr of other workers
+    w.LoadNodesData(dataPath); // load graph partition based on id
+
+    // Worker broadcasts nodes that it has to other workers
+    // and receives info about other nodes. TCP is used
+
     thread broadcastNodeInfoTr(Worker::broadcastNodeInfo, w);
     Worker::recvNodeInfo(w);
     broadcastNodeInfoTr.join();
 
-    /*thread clusteringCoeffTr(Worker::calculateClusteringCoeff, ref(w));
+    // ------------------
 
-    clusteringCoeffTr.join();*/
+    w.createAndBindSock(SOCK_DGRAM);
+    sleep(2);
 
-    thread recvNodeNeighborsRequestTr(Worker::recvNodeNeighborsRequest, w);
-
+    thread listenForRequestTr(Worker::listenForRequest, ref(w));
+    
     Worker::calculateClusteringCoeff(w);
+    cout << "Worker " << id << " finished" << endl;
 
-    recvNodeNeighborsRequestTr.join();
-
-    cout << endl;
+    if (Worker::broadcastWorkConcensus(w)) {
+        cout << "Worker " << id << " shutting down" << endl;
+        exit(EXIT_SUCCESS);
+    }
+    else {
+        listenForRequestTr.join();
+        cout << "Worker " << id << " shutting down" << endl;
+    }
 }

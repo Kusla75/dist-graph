@@ -13,9 +13,13 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define SIZE 4096
 #define FIX_PORT 50000
+
+#define NEIGHREQ 0		// requesting for node neighbors message
+#define CONS 1			// consensus message
 
 using namespace std;
 
@@ -31,6 +35,7 @@ class Worker
 		map<int, float> clusteringCoeff;			// map that stores computation results (clustering coefficients of each node)
 		map<int, vector<int>> otherWorkersNodes;	// map that stores other node locations (which worker has which node)
 		vector<sockaddr_in> workersSockAddr;		// socket addresses of other workes
+		vector<bool> workConcensus;						
 	
 	public:
 	
@@ -44,7 +49,9 @@ class Worker
 		map<int, float>& getClusteringCoeff() { return clusteringCoeff; }
 		map<int, vector<int>>& getOtherWorkersNodes() { return otherWorkersNodes; }
 		vector<sockaddr_in>& getWorkersSockAddr() { return workersSockAddr; }
+		vector<bool>& getWorkConcensus() { return workConcensus; }
 
+		void createAndBindSock(int type);
 		void setWorkersSockAddr();
 		void LoadNodesData(string path);
 
@@ -53,6 +60,9 @@ class Worker
 
 		static void sendNodeInfoToWorker(Worker w, int workerId, int* data, int dataLen);
 		static vector<int> requestNodeNeighbors(Worker w, int node);
-		static void recvNodeNeighborsRequest(Worker w);
+		static void listenForRequest(Worker& w);
 		static void calculateClusteringCoeff(Worker& w);
+		static bool broadcastWorkConcensus(Worker& w);
+		static void sendDataToWorker(Worker w, int workerId, int* data, int dataLen);
+		static bool checkWorkConcensus(Worker w);
 };

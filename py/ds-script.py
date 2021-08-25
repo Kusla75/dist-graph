@@ -8,7 +8,7 @@ import partition as par
 G = nx.Graph()
 edge = []
 
-ds_name = 'soc-karate' # dataset that will be used
+ds_name = 'fb-pages' # dataset that will be used
 
 n_partitions = 0 # number of partitions
 k = 0 # number of copies for every node 
@@ -21,7 +21,7 @@ if k != '':
 else:
     k = 1
 
-G = par.read_dataset(G, p.karate_path)
+G = par.read_dataset(G, p.fb_pages_path)
 
 partitions = par.random_partitioning(G, n_partitions, k)
 
