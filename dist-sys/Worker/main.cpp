@@ -10,16 +10,20 @@
 #include "Worker.h"
 
 using namespace std;
-string dataPath = "/home/nikola/partitions/fb-pages/N8_K1";
+
+string partitionsDir = "fb-pages/N8_K1/";
+string dataPath = "/home/nikola/partitions/" + partitionsDir;
+string resultsPath = "/home/nikola/results/" + partitionsDir;
 
 //  Command-line arg: Number of workers, WorkerId, Other
 
 int main(int argc, char* argv[])
 {
-    auto startTime = chrono::high_resolution_clock::now();
+    chrono::steady_clock::time_point startTime = chrono::steady_clock::now();
 
     int id = atoi(argv[2]);
     int numWorkers = atoi(argv[1]);
+    int executionTime = 0;
 
     // Init phase
 
@@ -44,18 +48,16 @@ int main(int argc, char* argv[])
     
     Worker::calculateClusteringCoeff(w);
     cout << "Worker " << id << " finished" << endl;
-    bool consRes = Worker::broadcastWorkConsensus(w);
 
-    auto endTime = chrono::high_resolution_clock::now();
-    auto executionTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
-    cout << "Worker " << w.getId() << " time: " << executionTime.count() << " ms" << endl;
-
-    if (consRes) {
+    if (Worker::broadcastWorkConsensus(w)) {
         cout << "Worker " << id << " shutting down" << endl;
+        w.LogResults(w, resultsPath, startTime);
+
         exit(EXIT_SUCCESS);
     }
-    else {
-        listenForRequestTr.join();
-        cout << "Worker " << id << " shutting down" << endl;
-    }
+
+    listenForRequestTr.join();
+
+    cout << "Worker " << id << " shutting down" << endl;
+    w.LogResults(w, resultsPath, startTime);
 }

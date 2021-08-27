@@ -33,7 +33,7 @@ class Worker
 		int sockfd;									// file descriptor of socket binded to localhost
 		sockaddr_in sockAddr;						// struct that holds listening port and address family
 		map<int, vector<int>> nodes;				// data that will be used for computation. Holds node and it's neighbors
-		map<int, float> clusteringCoeff;			// map that stores computation results (clustering coefficients of each node)
+		map<int, double> clusteringCoeff;			// map that stores computation results (clustering coefficients of each node)
 		map<int, vector<int>> otherWorkersNodes;	// map that stores other node locations (which worker has which node)
 		vector<sockaddr_in> workersSockAddr;		// socket addresses of other workes
 		vector<bool> workConsensus;
@@ -47,7 +47,7 @@ class Worker
 		int getSockfd() { return sockfd; }
 		sockaddr_in& getSockAddr() { return sockAddr; }
 		map<int, vector<int>>& getNodes() { return nodes; }
-		map<int, float>& getClusteringCoeff() { return clusteringCoeff; }
+		map<int, double>& getClusteringCoeff() { return clusteringCoeff; }
 		map<int, vector<int>>& getOtherWorkersNodes() { return otherWorkersNodes; }
 		vector<sockaddr_in>& getWorkersSockAddr() { return workersSockAddr; }
 		vector<bool>& getWorkConsensus() { return workConsensus; }
@@ -67,5 +67,5 @@ class Worker
 		static void sendDataToWorker(Worker w, int workerId, int* data, int dataLen);
 		static bool checkWorkConsensus(Worker w);
 
-		static void LogResults(Worker w);
+		static void LogResults(Worker w, string path, chrono::steady_clock::time_point startTime);
 };

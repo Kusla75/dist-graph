@@ -10,7 +10,7 @@ Worker::Worker(int workerId, int numWorkers) {
 	sockAddr.sin_port = FIX_PORT + workerId;
 
 	this->nodes = map<int, vector<int>>();
-	this->clusteringCoeff = map<int, float>();
+	this->clusteringCoeff = map<int, double>();
 	this->otherWorkersNodes = map<int, vector<int>>();
 
 	this->workersSockAddr = vector<sockaddr_in>();
@@ -200,7 +200,7 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 	int neighbor;
 	int neighborsEdges = 0;
 	int numNeighbors = 0;
-	float coeff = 0;
+	double coeff = 0;
 	int totalneighborEdges = 0;
 	vector<int> neighborNeighbors;
 
@@ -241,10 +241,10 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 					}
 				}
 			}
-			coeff = (float)neighborsEdges / (float)totalneighborEdges;
+			coeff = (double)neighborsEdges / (double)totalneighborEdges;
 		}
 
-		w.getClusteringCoeff().insert(pair<int, float>(node, coeff));
+		w.getClusteringCoeff().insert(pair<int, double>(node, coeff));
 	}
 }
 
@@ -292,6 +292,27 @@ bool Worker::checkWorkConsensus(Worker w) {
 
 // ----------------------------------------------------------------------------------------------------------------
 
-void LogResults(Worker w) {
-	
+void Worker::LogResults(Worker w, string path, chrono::steady_clock::time_point startTime) {
+
+	auto endTime = chrono::steady_clock::now();
+	int executionTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count();
+	cout << "Worker " << w.getId() << " time: " << executionTime << " ms" << endl;
+
+	ofstream file;
+	string fileName = path + to_string(w.getId()) + "_res.txt";
+
+	string command = "mkdir -p " + path;
+	system(command.c_str());
+
+	file.open(fileName);
+	for (auto pair : w.getClusteringCoeff()) {
+		file << to_string(pair.first) << ": " << to_string(pair.second) << endl;
+	}
+	file.close();
+
+	fileName = path + to_string(w.getId()) + "_info.txt";
+	file.open(fileName);
+	file << "Execution time: " << executionTime << " ms" << endl;
+
+	file.close();
 }
