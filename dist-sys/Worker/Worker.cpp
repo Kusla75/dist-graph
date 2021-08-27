@@ -14,7 +14,7 @@ Worker::Worker(int workerId, int numWorkers) {
 	this->otherWorkersNodes = map<int, vector<int>>();
 
 	this->workersSockAddr = vector<sockaddr_in>();
-	this->workConcensus = vector<bool>(this->numWorkers, false);
+	this->workConsensus = vector<bool>(this->numWorkers, false);
 }
 
 void Worker::createAndBindSock(int type) {
@@ -188,8 +188,8 @@ void Worker::listenForRequest(Worker& w) {
 				sendto(w.getSockfd(), tempVec.data(), tempVec.size() * sizeof(int), 0, (sockaddr*)&addr, addrLen);
 			}; break;
 			case CONS: {
-				w.getWorkConcensus()[buffer[1]] = true;
-				quit = checkWorkConcensus(w);
+				w.getWorkConsensus()[buffer[1]] = true;
+				quit = checkWorkConsensus(w);
 			}; break;
 		}
 	}
@@ -208,46 +208,51 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 		node = pr.first;
 		numNeighbors = pr.second.size();
 
-		neighborsEdges = 0;
-		totalneighborEdges = (numNeighbors * (numNeighbors - 1)) / 2;
-
-		for (int i = 0; i < numNeighbors; ++i) {
-
-			neighbor = pr.second[i];
-
-			// Check if worker has node in memory
-			if (w.getNodes().find(neighbor) == w.getNodes().end()) {
-				// not found
-				neighborNeighbors = requestNodeNeighbors(w, neighbor);
-
-				for (int j = i + 1; j < numNeighbors; ++j) {
-
-					if (binary_search(neighborNeighbors.begin(), neighborNeighbors.end(), pr.second[j])) {
-						neighborsEdges++;
-					}
-				}
-			}
-			else {
-				// found
-				for (int j = i + 1; j < numNeighbors; ++j) {
-
-					if (binary_search(w.getNodes()[neighbor].begin(), w.getNodes()[neighbor].end(), pr.second[j])) {
-						neighborsEdges++;
-					}
-				}
-			}
+		if (numNeighbors == 1) {
+			coeff = 0;
 		}
-		
-		coeff = (float)neighborsEdges / (float)totalneighborEdges;
+		else {
+			neighborsEdges = 0;
+			totalneighborEdges = (numNeighbors * (numNeighbors - 1)) / 2;
+
+			for (int i = 0; i < numNeighbors; ++i) {
+
+				neighbor = pr.second[i];
+
+				// Check if worker has node in memory
+				if (w.getNodes().find(neighbor) == w.getNodes().end()) {
+					// not found
+					neighborNeighbors = requestNodeNeighbors(w, neighbor);
+
+					for (int j = i + 1; j < numNeighbors; ++j) {
+
+						if (binary_search(neighborNeighbors.begin(), neighborNeighbors.end(), pr.second[j])) {
+							neighborsEdges++;
+						}
+					}
+				}
+				else {
+					// found
+					for (int j = i + 1; j < numNeighbors; ++j) {
+
+						if (binary_search(w.getNodes()[neighbor].begin(), w.getNodes()[neighbor].end(), pr.second[j])) {
+							neighborsEdges++;
+						}
+					}
+				}
+			}
+			coeff = (float)neighborsEdges / (float)totalneighborEdges;
+		}
+
 		w.getClusteringCoeff().insert(pair<int, float>(node, coeff));
 	}
 }
 
-bool Worker::broadcastWorkConcensus(Worker& w) {
+bool Worker::broadcastWorkConsensus(Worker& w) {
 	int i;
 	vector<thread> threads;
 
-	w.getWorkConcensus()[w.getId()] = true;
+	w.getWorkConsensus()[w.getId()] = true;
 	int buffer[2];
 	buffer[0] = CONS;
 	buffer[1] = w.getId();
@@ -261,7 +266,7 @@ bool Worker::broadcastWorkConcensus(Worker& w) {
 		threads[i].join();
 	}
 
-	return checkWorkConcensus(w);
+	return checkWorkConsensus(w);
 }
 
 void Worker::sendDataToWorker(Worker w, int workerId, int* data, int dataLen) {
@@ -274,13 +279,19 @@ void Worker::sendDataToWorker(Worker w, int workerId, int* data, int dataLen) {
 	close(sock);
 }
 
-bool Worker::checkWorkConcensus(Worker w) {
+bool Worker::checkWorkConsensus(Worker w) {
 
 	for (int i = 0; i < w.getNumWorkers(); ++i) {
-		if (!w.getWorkConcensus()[i]) {
+		if (!w.getWorkConsensus()[i]) {
 			return false;
 		}
 	}
 
 	return true;
+}
+
+// ----------------------------------------------------------------------------------------------------------------
+
+void LogResults(Worker w) {
+	
 }

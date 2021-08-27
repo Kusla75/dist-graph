@@ -16,6 +16,8 @@ string dataPath = "/home/nikola/partitions/fb-pages/N8_K1";
 
 int main(int argc, char* argv[])
 {
+    auto startTime = chrono::high_resolution_clock::now();
+
     int id = atoi(argv[2]);
     int numWorkers = atoi(argv[1]);
 
@@ -42,8 +44,13 @@ int main(int argc, char* argv[])
     
     Worker::calculateClusteringCoeff(w);
     cout << "Worker " << id << " finished" << endl;
+    bool consRes = Worker::broadcastWorkConsensus(w);
 
-    if (Worker::broadcastWorkConcensus(w)) {
+    auto endTime = chrono::high_resolution_clock::now();
+    auto executionTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
+    cout << "Worker " << w.getId() << " time: " << executionTime.count() << " ms" << endl;
+
+    if (consRes) {
         cout << "Worker " << id << " shutting down" << endl;
         exit(EXIT_SUCCESS);
     }

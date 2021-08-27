@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <sstream>
 #include <thread>
+#include <chrono>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -35,7 +36,7 @@ class Worker
 		map<int, float> clusteringCoeff;			// map that stores computation results (clustering coefficients of each node)
 		map<int, vector<int>> otherWorkersNodes;	// map that stores other node locations (which worker has which node)
 		vector<sockaddr_in> workersSockAddr;		// socket addresses of other workes
-		vector<bool> workConcensus;						
+		vector<bool> workConsensus;
 	
 	public:
 	
@@ -49,7 +50,7 @@ class Worker
 		map<int, float>& getClusteringCoeff() { return clusteringCoeff; }
 		map<int, vector<int>>& getOtherWorkersNodes() { return otherWorkersNodes; }
 		vector<sockaddr_in>& getWorkersSockAddr() { return workersSockAddr; }
-		vector<bool>& getWorkConcensus() { return workConcensus; }
+		vector<bool>& getWorkConsensus() { return workConsensus; }
 
 		void createAndBindSock(int type);
 		void setWorkersSockAddr();
@@ -62,7 +63,9 @@ class Worker
 		static vector<int> requestNodeNeighbors(Worker w, int node);
 		static void listenForRequest(Worker& w);
 		static void calculateClusteringCoeff(Worker& w);
-		static bool broadcastWorkConcensus(Worker& w);
+		static bool broadcastWorkConsensus(Worker& w);
 		static void sendDataToWorker(Worker w, int workerId, int* data, int dataLen);
-		static bool checkWorkConcensus(Worker w);
+		static bool checkWorkConsensus(Worker w);
+
+		static void LogResults(Worker w);
 };
