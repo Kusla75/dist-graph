@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <sstream>
+#include <iomanip>
 #include <thread>
 #include <chrono>
 
@@ -16,7 +17,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define SIZE 4096
+#define SIZE 8192
 #define FIX_PORT 50000
 
 #define NEIGHREQ 0		// requesting for node neighbors message
@@ -67,5 +68,5 @@ class Worker
 		static void sendDataToWorker(Worker w, int workerId, int* data, int dataLen);
 		static bool checkWorkConsensus(Worker w);
 
-		static void LogResults(Worker w, string path, chrono::steady_clock::time_point startTime);
+		static void LogResults(Worker w, string path, int executionTime);
 };

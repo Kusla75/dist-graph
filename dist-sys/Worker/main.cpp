@@ -23,7 +23,6 @@ int main(int argc, char* argv[])
 
     int id = atoi(argv[2]);
     int numWorkers = atoi(argv[1]);
-    int executionTime = 0;
 
     // Init phase
 
@@ -47,11 +46,16 @@ int main(int argc, char* argv[])
     thread listenForRequestTr(Worker::listenForRequest, ref(w));
     
     Worker::calculateClusteringCoeff(w);
+
     cout << "Worker " << id << " finished" << endl;
+    auto endTime = chrono::steady_clock::now();
+    int executionTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count();
+    cout << "Worker " << w.getId() << " time: " << executionTime << " ms" << endl;
+
 
     if (Worker::broadcastWorkConsensus(w)) {
         cout << "Worker " << id << " shutting down" << endl;
-        w.LogResults(w, resultsPath, startTime);
+        w.LogResults(w, resultsPath, executionTime);
 
         exit(EXIT_SUCCESS);
     }
@@ -59,5 +63,5 @@ int main(int argc, char* argv[])
     listenForRequestTr.join();
 
     cout << "Worker " << id << " shutting down" << endl;
-    w.LogResults(w, resultsPath, startTime);
+    w.LogResults(w, resultsPath, executionTime);
 }

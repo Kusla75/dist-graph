@@ -7,9 +7,9 @@ from partition import read_dataset
 
 G = nx.Graph()
 
-ds_file = 'soc-karate.txt' # Name of file to save solution
+ds_file = 'fb-pages.txt' # Name of file to save solution
 
-G = read_dataset(G, p.karate_path)
+G = read_dataset(G, p.fb_pages_path)
 
 clustering_coeff_dic = nx.clustering(G)
 

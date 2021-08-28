@@ -13,3 +13,6 @@ cp -rf $src $dest
 
 src=$repo/py
 cp -rf $src $dest
+
+src=$repo/solutions
+cp -rf $src $dest

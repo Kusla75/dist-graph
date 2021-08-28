@@ -47,7 +47,8 @@ def read_dataset(G, dataset_path):
         for line in lines:
             line = line.strip('\n')
             edge = line.split(sep)
-            G.add_edge(edge[0], edge[1])
+            if edge[0] != edge[1]:
+                G.add_edge(edge[0], edge[1])
 
     return G
 

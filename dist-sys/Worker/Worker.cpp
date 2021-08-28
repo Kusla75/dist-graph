@@ -292,11 +292,7 @@ bool Worker::checkWorkConsensus(Worker w) {
 
 // ----------------------------------------------------------------------------------------------------------------
 
-void Worker::LogResults(Worker w, string path, chrono::steady_clock::time_point startTime) {
-
-	auto endTime = chrono::steady_clock::now();
-	int executionTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count();
-	cout << "Worker " << w.getId() << " time: " << executionTime << " ms" << endl;
+void Worker::LogResults(Worker w, string path, int executionTime) {
 
 	ofstream file;
 	string fileName = path + to_string(w.getId()) + "_res.txt";
@@ -306,7 +302,9 @@ void Worker::LogResults(Worker w, string path, chrono::steady_clock::time_point 
 
 	file.open(fileName);
 	for (auto pair : w.getClusteringCoeff()) {
-		file << to_string(pair.first) << ": " << to_string(pair.second) << endl;
+		ostringstream stream;
+		stream << setprecision(16) << pair.second;
+		file << to_string(pair.first) << ": " << stream.str() << endl;
 	}
 	file.close();
 
