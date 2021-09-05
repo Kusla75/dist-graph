@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <thread>
 #include <chrono>
+#include <cstring>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -22,6 +23,7 @@
 
 #define NEIGHREQ 0		// requesting for node neighbors message
 #define CONS 1			// consensus message
+#define CALCNODE 2		// message that holdes clustering coeff of node calculated
 
 using namespace std;
 
@@ -34,7 +36,7 @@ class Worker
 		int sockfd;									// file descriptor of socket binded to localhost
 		sockaddr_in sockAddr;						// struct that holds listening port and address family
 		map<int, vector<int>> nodes;				// data that will be used for computation. Holds node and it's neighbors
-		map<int, double> clusteringCoeff;			// map that stores computation results (clustering coefficients of each node)
+		map<int, float> clusteringCoeff;			// map that stores computation results (clustering coefficients of each node)
 		map<int, vector<int>> otherWorkersNodes;	// map that stores other node locations (which worker has which node)
 		vector<sockaddr_in> workersSockAddr;		// socket addresses of other workes
 		vector<bool> workConsensus;
@@ -48,7 +50,7 @@ class Worker
 		int getSockfd() { return sockfd; }
 		sockaddr_in& getSockAddr() { return sockAddr; }
 		map<int, vector<int>>& getNodes() { return nodes; }
-		map<int, double>& getClusteringCoeff() { return clusteringCoeff; }
+		map<int, float>& getClusteringCoeff() { return clusteringCoeff; }
 		map<int, vector<int>>& getOtherWorkersNodes() { return otherWorkersNodes; }
 		vector<sockaddr_in>& getWorkersSockAddr() { return workersSockAddr; }
 		vector<bool>& getWorkConsensus() { return workConsensus; }
@@ -64,6 +66,7 @@ class Worker
 		static vector<int> requestNodeNeighbors(Worker w, int node);
 		static void listenForRequest(Worker& w);
 		static void calculateClusteringCoeff(Worker& w);
+		static void broadcastClusteringCoeffInfo(Worker& w, int node, float clusteringCoeff);
 		static bool broadcastWorkConsensus(Worker& w);
 		static void sendDataToWorker(Worker w, int workerId, int* data, int dataLen);
 		static bool checkWorkConsensus(Worker w);

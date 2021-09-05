@@ -30,7 +30,7 @@ def load_data(f):
             line = line.split(":")
 
             flt = float(line[1])
-            dic[line[0]] = round(flt, 10)
+            dic[line[0]] = round(flt, 5)
 
     return dic
 

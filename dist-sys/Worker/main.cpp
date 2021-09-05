@@ -11,7 +11,7 @@
 
 using namespace std;
 
-string partitionsDir = "fb-pages/N8_K1/";
+string partitionsDir = "soc-hamsterster/N5_K2/";
 string dataPath = "/home/nikola/partitions/" + partitionsDir;
 string resultsPath = "/home/nikola/results/" + partitionsDir;
 

@@ -10,7 +10,7 @@ Worker::Worker(int workerId, int numWorkers) {
 	sockAddr.sin_port = FIX_PORT + workerId;
 
 	this->nodes = map<int, vector<int>>();
-	this->clusteringCoeff = map<int, double>();
+	this->clusteringCoeff = map<int, float>();
 	this->otherWorkersNodes = map<int, vector<int>>();
 
 	this->workersSockAddr = vector<sockaddr_in>();
@@ -77,6 +77,8 @@ void Worker::LoadNodesData(string path) {
 		sort(nodeNeighbors.begin(), nodeNeighbors.end());
 		nodes.insert(pair<int, vector<int>>(node, nodeNeighbors));
 		nodeNeighbors.clear();
+
+		clusteringCoeff.insert(pair<int, float>(node, -1));
 	}
 }
 
@@ -183,13 +185,22 @@ void Worker::listenForRequest(Worker& w) {
 		int len = byteSize / sizeof(int);
 
 		switch (buffer[0]) {
+
 			case NEIGHREQ: {
 				tempVec = w.getNodes()[buffer[1]];
-				sendto(w.getSockfd(), tempVec.data(), tempVec.size() * sizeof(int), 0, (sockaddr*)&addr, addrLen);
+				sendto(w.getSockfd(), tempVec.data(), tempVec.size() * sizeof(int), 0, (sockaddr*) &addr, addrLen);
 			}; break;
+
 			case CONS: {
 				w.getWorkConsensus()[buffer[1]] = true;
 				quit = checkWorkConsensus(w);
+			}; break;
+
+			case CALCNODE: {
+				float clusteringCoeff;
+				memcpy(&clusteringCoeff, buffer + 2, sizeof(float));
+				w.getClusteringCoeff()[buffer[1]] = clusteringCoeff;
+
 			}; break;
 		}
 	}
@@ -200,7 +211,7 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 	int neighbor;
 	int neighborsEdges = 0;
 	int numNeighbors = 0;
-	double coeff = 0;
+	float coeff = 0;
 	int totalneighborEdges = 0;
 	vector<int> neighborNeighbors;
 
@@ -208,43 +219,67 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 		node = pr.first;
 		numNeighbors = pr.second.size();
 
-		if (numNeighbors == 1) {
-			coeff = 0;
-		}
-		else {
-			neighborsEdges = 0;
-			totalneighborEdges = (numNeighbors * (numNeighbors - 1)) / 2;
-
-			for (int i = 0; i < numNeighbors; ++i) {
-
-				neighbor = pr.second[i];
-
-				// Check if worker has node in memory
-				if (w.getNodes().find(neighbor) == w.getNodes().end()) {
-					// not found
-					neighborNeighbors = requestNodeNeighbors(w, neighbor);
-
-					for (int j = i + 1; j < numNeighbors; ++j) {
-
-						if (binary_search(neighborNeighbors.begin(), neighborNeighbors.end(), pr.second[j])) {
-							neighborsEdges++;
-						}
-					}
-				}
-				else {
-					// found
-					for (int j = i + 1; j < numNeighbors; ++j) {
-
-						if (binary_search(w.getNodes()[neighbor].begin(), w.getNodes()[neighbor].end(), pr.second[j])) {
-							neighborsEdges++;
-						}
-					}
-				}
+		if (w.getClusteringCoeff()[node] == -1)
+		{
+			if (numNeighbors == 1) {
+				coeff = 0;
 			}
-			coeff = (double)neighborsEdges / (double)totalneighborEdges;
-		}
+			else {
+				neighborsEdges = 0;
+				totalneighborEdges = (numNeighbors * (numNeighbors - 1)) / 2;
 
-		w.getClusteringCoeff().insert(pair<int, double>(node, coeff));
+				for (int i = 0; i < numNeighbors; ++i) {
+
+					neighbor = pr.second[i];
+
+					// Check if worker has node in memory
+					if (w.getNodes().find(neighbor) == w.getNodes().end()) {
+						// not found
+						neighborNeighbors = requestNodeNeighbors(w, neighbor);
+
+						for (int j = i + 1; j < numNeighbors; ++j) {
+
+							if (binary_search(neighborNeighbors.begin(), neighborNeighbors.end(), pr.second[j])) {
+								neighborsEdges++;
+							}
+						}
+					}
+					else {
+						// found
+						for (int j = i + 1; j < numNeighbors; ++j) {
+
+							if (binary_search(w.getNodes()[neighbor].begin(), w.getNodes()[neighbor].end(), pr.second[j])) {
+								neighborsEdges++;
+							}
+						}
+					}
+				}
+
+				coeff = (float)neighborsEdges / (float)totalneighborEdges;
+			}
+
+			w.getClusteringCoeff()[node] = coeff;
+			broadcastClusteringCoeffInfo(w, node, coeff);
+		}
+	}
+}
+
+void Worker::broadcastClusteringCoeffInfo(Worker& w, int node, float clusteringCoeff) {
+	int i;
+	vector<thread> threads;
+
+	int buffer[3];
+	buffer[0] = CALCNODE;
+	buffer[1] = node;
+	memcpy(buffer+2, &clusteringCoeff, sizeof(float));
+
+	for (i = 0; i < w.getNumWorkers(); ++i) {
+		if (i != w.getId()) {
+			threads.push_back(thread(Worker::sendDataToWorker, w, i, &buffer[0], sizeof(int) * 3));
+		}
+	}
+	for (i = 0; i < w.getNumWorkers() - 1; ++i) {
+		threads[i].join();
 	}
 }
 
@@ -303,7 +338,7 @@ void Worker::LogResults(Worker w, string path, int executionTime) {
 	file.open(fileName);
 	for (auto pair : w.getClusteringCoeff()) {
 		ostringstream stream;
-		stream << setprecision(16) << pair.second;
+		stream << setprecision(8) << pair.second;
 		file << to_string(pair.first) << ": " << stream.str() << endl;
 	}
 	file.close();
