@@ -2,7 +2,7 @@
 
 ### This script is used to init n workers in background
 ### First arg is numbe of workers
-### Second arg meang which worker NOT to initialize
+### Second arg means which worker NOT to initialize
 
 exe_dir=/home/nikola/projects/Worker/bin/x64/Debug
 

@@ -56,7 +56,7 @@ class Worker
 		vector<bool>& getWorkConsensus() { return workConsensus; }
 
 		void createAndBindSock(int type);
-		void setWorkersSockAddr();
+		void setWorkersSockAddr(string ipFileName);
 		void LoadNodesData(string path);
 
 		static void broadcastNodeInfo(Worker w);

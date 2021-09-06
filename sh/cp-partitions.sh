@@ -16,3 +16,5 @@ cp -rf $src $dest
 
 src=$repo/solutions
 cp -rf $src $dest
+
+cp -rf $repo/*.txt $dest

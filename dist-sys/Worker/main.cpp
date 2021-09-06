@@ -11,9 +11,10 @@
 
 using namespace std;
 
-string partitionsDir = "soc-hamsterster/N5_K2/";
+string partitionsDir = "fb-pages-food/N2_K1/";
 string dataPath = "/home/nikola/partitions/" + partitionsDir;
 string resultsPath = "/home/nikola/results/" + partitionsDir;
+string ipFileName = "/home/nikola/ip_addrs.txt";
 
 //  Command-line arg: Number of workers, WorkerId, Other
 
@@ -28,7 +29,7 @@ int main(int argc, char* argv[])
 
     Worker w(id, numWorkers);
     w.createAndBindSock(SOCK_STREAM);
-    w.setWorkersSockAddr(); // set sockaddr of other workers
+    w.setWorkersSockAddr(ipFileName); // set sockaddr of other workers
     w.LoadNodesData(dataPath); // load graph partition based on id
 
     // Worker broadcasts nodes that it has to other workers

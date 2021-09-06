@@ -33,15 +33,32 @@ void Worker::createAndBindSock(int type) {
 	}
 }
 
-void Worker::setWorkersSockAddr() {
+void Worker::setWorkersSockAddr(string ipFileName) {
 	sockaddr_in addrTmp;
 	addrTmp.sin_family = AF_INET;
 
+	int i;
+	ifstream ipFile(ipFileName.c_str());
+	vector<string> ipAddr;
+	string line;
+
+	if (ipFile.good()) {
+		while (getline(ipFile, line)) {
+			line.erase(remove(line.begin(), line.end(), '\r'), line.end());
+			ipAddr.push_back(line);
+		}
+	}
+	else {
+		for (i = 0; i < numWorkers; ++i) {
+			ipAddr.push_back("127.0.0.1");
+		}
+	}
+
 	// Create list of workers ip and port
-	for (int i = 0; i < numWorkers; ++i) {
+	for (i = 0; i < numWorkers; ++i) {
 		addrTmp.sin_port = FIX_PORT + i;
 
-		if (inet_pton(AF_INET, "127.0.0.1", &addrTmp.sin_addr) <= 0)
+		if (inet_pton(AF_INET, ipAddr[i].c_str(), &addrTmp.sin_addr) <= 0)
 		{
 			cout << "Invalid address for " << i << " worker" << endl;
 			exit(EXIT_FAILURE);
@@ -259,7 +276,7 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
-			broadcastClusteringCoeffInfo(w, node, coeff);
+			//broadcastClusteringCoeffInfo(w, node, coeff);
 		}
 	}
 }
