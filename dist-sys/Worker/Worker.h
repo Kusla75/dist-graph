@@ -40,6 +40,7 @@ class Worker
 		map<int, vector<int>> otherWorkersNodes;	// map that stores other node locations (which worker has which node)
 		vector<sockaddr_in> workersSockAddr;		// socket addresses of other workes
 		vector<bool> workConsensus;
+		vector<int> timeCheckpoints;
 	
 	public:
 	
@@ -54,6 +55,7 @@ class Worker
 		map<int, vector<int>>& getOtherWorkersNodes() { return otherWorkersNodes; }
 		vector<sockaddr_in>& getWorkersSockAddr() { return workersSockAddr; }
 		vector<bool>& getWorkConsensus() { return workConsensus; }
+		vector<int>& getTimeCheckpoint() { return timeCheckpoints; };
 
 		void createAndBindSock(int type);
 		void setWorkersSockAddr(string ipFileName);
@@ -71,5 +73,7 @@ class Worker
 		static void sendDataToWorker(Worker w, int workerId, int* data, int dataLen);
 		static bool checkWorkConsensus(Worker w);
 
-		static void LogResults(Worker w, string path, int executionTime);
+		void addTimeCheckpoint(chrono::steady_clock::time_point& startTime);
+		int totalTime();
+		static void LogResults(Worker w, string path);
 };

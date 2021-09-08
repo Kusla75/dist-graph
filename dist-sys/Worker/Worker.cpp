@@ -15,6 +15,7 @@ Worker::Worker(int workerId, int numWorkers) {
 
 	this->workersSockAddr = vector<sockaddr_in>();
 	this->workConsensus = vector<bool>(this->numWorkers, false);
+	this->timeCheckpoints.push_back(0);
 }
 
 void Worker::createAndBindSock(int type) {
@@ -216,6 +217,7 @@ void Worker::listenForRequest(Worker& w) {
 			case CALCNODE: {
 				float clusteringCoeff;
 				memcpy(&clusteringCoeff, buffer + 2, sizeof(float));
+
 				w.getClusteringCoeff()[buffer[1]] = clusteringCoeff;
 
 			}; break;
@@ -276,7 +278,7 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
-			//broadcastClusteringCoeffInfo(w, node, coeff);
+			broadcastClusteringCoeffInfo(w, node, coeff);
 		}
 	}
 }
@@ -344,7 +346,24 @@ bool Worker::checkWorkConsensus(Worker w) {
 
 // ----------------------------------------------------------------------------------------------------------------
 
-void Worker::LogResults(Worker w, string path, int executionTime) {
+void Worker::addTimeCheckpoint(chrono::steady_clock::time_point& startTime)
+{
+	auto endTime = chrono::steady_clock::now();
+	int executionTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count();
+
+	int last = timeCheckpoints.back();
+	timeCheckpoints.push_back(executionTime - last);
+}
+
+int Worker::totalTime() {
+	int totalTime = 0;
+	for (int i = 0; i < timeCheckpoints.size(); ++i) {
+		totalTime += timeCheckpoints[i];
+	}
+	return totalTime;
+}
+
+void Worker::LogResults(Worker w, string path) {
 
 	ofstream file;
 	string fileName = path + to_string(w.getId()) + "_res.txt";
@@ -362,7 +381,11 @@ void Worker::LogResults(Worker w, string path, int executionTime) {
 
 	fileName = path + to_string(w.getId()) + "_info.txt";
 	file.open(fileName);
-	file << "Execution time: " << executionTime << " ms" << endl;
+	file << "Init time: " << w.getTimeCheckpoint()[1] << endl;
+	file << "Calculating time: " << w.getTimeCheckpoint()[2] << endl;
+	file << "Total time: " << w.totalTime() << " ms" << endl;
 
 	file.close();
+
+	cout << "Worker " << w.getId() << " total time : " << w.totalTime() << " ms" << endl;
 }

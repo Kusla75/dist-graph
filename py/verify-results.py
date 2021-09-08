@@ -59,6 +59,7 @@ for ds_dir in os.listdir(results_path):
                     print(colors.HEADER + os.path.join(ds_dir, part_dir, f_name) + colors.ENDC, end=" ")
                     print(error_nodes)
                     num_errors += len(error_nodes)
+        path = os.path.split(path)[0]
 
 if num_errors == 0:
     print(colors.OKGREEN + "\nVerification complete. No errors detected" + colors.ENDC)
