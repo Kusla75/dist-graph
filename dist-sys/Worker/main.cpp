@@ -6,15 +6,18 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <thread>
+#include <cstdlib>
 
 #include "Worker.h"
 
 using namespace std;
 
-string partitionsDir = "fb-pages-food/N5_K3/";
-string dataPath = "/home/nikola/partitions/" + partitionsDir;
-string resultsPath = "/home/nikola/results/" + partitionsDir;
-string ipFileName = "/home/nikola/ip_addrs.txt";
+string homeDir = getenv("HOME");
+
+string partitionsDir = "fb-pages-food/N3_K2/";
+string dataPath = homeDir + "/partitions/" + partitionsDir;
+string resultsPath = homeDir + "/results/" + partitionsDir;
+string ipFileName = homeDir + "/ip_addrs.txt";
 
 //  Command-line arg: Number of workers, WorkerId, Other
 
@@ -35,10 +38,13 @@ int main(int argc, char* argv[])
     // Worker broadcasts nodes that it has to other workers
     // and receives info about other nodes. TCP is used
 
+    cout << "Worker object created" << endl;
+
     thread broadcastNodeInfoTr(Worker::broadcastNodeInfo, w);
     Worker::recvNodeInfo(w);
     broadcastNodeInfoTr.join();
 
+    cout << "Node info broadcasted" << endl;
     w.createAndBindSock(SOCK_DGRAM);
     sleep(2);
 

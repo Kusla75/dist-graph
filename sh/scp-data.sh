@@ -3,7 +3,7 @@
 ### This script is used to copy necessary repo files
 ### to other remote machines
 
-dir=/home/nikola
+dir=~/
 ip_file=/home/nikola/ip_addrs.txt
 
 while read -r ip

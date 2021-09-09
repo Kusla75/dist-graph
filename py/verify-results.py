@@ -2,8 +2,9 @@
 
 import os
 
-solution_path = "/home/nikola/solutions/"
-results_path = "/home/nikola/results/"
+home_dir = os.environ["HOME"]
+solution_path = home_dir + "/solutions/"
+results_path = home_dir + "/results/"
 
 solution_dic = {}
 results_dic = {}

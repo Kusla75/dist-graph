@@ -27,7 +27,7 @@ void Worker::createAndBindSock(int type) {
 		exit(EXIT_FAILURE);
 	}
 
-	int bindStatus = bind(sockfd, (sockaddr*)&sockAddr, sizeof(sockAddr));
+	int bindStatus = ::bind(sockfd, (sockaddr*)&sockAddr, sizeof(sockAddr));
 	if (bindStatus < 0) {
 		cout << "Binding failed" << endl;
 		exit(EXIT_FAILURE);
@@ -278,7 +278,9 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
+			cout << node << ": " << coeff << endl;
 			broadcastClusteringCoeffInfo(w, node, coeff);
+			cout << "Broadcast " << node << ": " << coeff << endl;
 		}
 	}
 }
@@ -381,8 +383,9 @@ void Worker::LogResults(Worker w, string path) {
 
 	fileName = path + to_string(w.getId()) + "_info.txt";
 	file.open(fileName);
-	file << "Init time: " << w.getTimeCheckpoint()[1] << endl;
-	file << "Calculating time: " << w.getTimeCheckpoint()[2] << endl;
+	file << "Init time: " << w.getTimeCheckpoint()[1] << " ms" << endl;
+	file << "Calculating time: " << w.getTimeCheckpoint()[2] << " ms" << endl;
+	file << "Consensus time: " << w.getTimeCheckpoint()[3] << " ms" << endl;
 	file << "Total time: " << w.totalTime() << " ms" << endl;
 
 	file.close();

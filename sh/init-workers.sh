@@ -4,7 +4,7 @@
 ### First arg is numbe of workers
 ### Second arg means which worker NOT to initialize
 
-exe_dir=/home/nikola/projects/Worker/bin/x64/Debug
+exe_dir=~/projects/Worker/bin/x64/Debug
 
 for id in $(seq 0 $(($1-1)) )
 do

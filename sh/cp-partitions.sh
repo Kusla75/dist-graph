@@ -3,7 +3,7 @@
 ### This script is used to copy partitions for workers, shell and python scripts
 
 repo=/mnt/c/Users/Nikola/Desktop/dist-graph
-dest=/home/nikola/
+dest=~/
 
 src=$repo/partitions
 cp -rf $src $dest
