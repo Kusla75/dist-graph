@@ -23,6 +23,6 @@ else:
 
 G = par.read_dataset(G, p.fb_pages_food_path)
 
-partitions = par.random_partitioning(G, n_partitions, k)
+partitions = par.node_deg_partitioning(G, n_partitions, k)
 
 par.write_partitions(partitions, ds_name, n_partitions, k)
