@@ -5,7 +5,7 @@ path = os.path.dirname(__file__)
 path = os.path.split(path)[0]
 
 # Dataset paths
-karate_path = path + '\\datasets\\soc-karate.mtx'
+soc_karate_path = path + '\\datasets\\soc-karate.mtx'
 fb_pages_path = path + '\\datasets\\fb-pages-government.edges'
 fb_pages_food_path = path + '\\datasets\\fb-pages-food.edges'
 socfb_caltech_path = path + '\\datasets\\socfb-caltech.mtx'

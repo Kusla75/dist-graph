@@ -60,15 +60,26 @@ def random_partitioning(G, n_partitions, k = 1):
 
     nodes_list = list(G.nodes)
 
-    random.seed(16)
+    random.seed(1616)
     random.shuffle(nodes_list)
     
     partitions = split_list(nodes_list, n_partitions)
  
+    # Cloning nodes
     if k > 1:
-        partitions = clone_nodes(G, partitions, k-1, find_min_size_partition)
+        for node in nodes_list:
+            for _ in range(k-1):
+                id_min = find_min_size_partition(partitions, node)
+                partitions[id_min].append(node)
 
     partitions = bad_sort(partitions) # Slow to execute
+
+    # s = 0
+    # for ind in range(len(partitions)):
+    #     for n in partitions[ind]:
+    #         s += G.degree[n]
+    #     print(f"{ind} {len(partitions[ind])} {s}")
+    #     s = 0
 
     partitions = create_partitions_dict(G, partitions)
         
@@ -79,15 +90,17 @@ def node_deg_partitioning(G, n_partitions, k = 1):
 
     nodes_list = list(G.nodes)
     partitions = []
+    par_deg_sum = []
 
-    for _ in range(n_partitions): partitions.append([])
+    for _ in range(n_partitions): 
+        partitions.append([])
+        par_deg_sum.append(0)
 
     for node in nodes_list:
-        id_min = find_min_node_deg_partition(G, partitions, node)
-        partitions[id_min].append(node)
-
-    if k > 1:
-        partitions = clone_nodes(G, partitions, k-1, find_min_node_deg_partition)
+        for _ in range(k):
+            id_min = find_min_node_deg_partition(partitions, node, par_deg_sum)
+            partitions[id_min].append(node)
+            par_deg_sum[id_min] += G.degree[node]
 
     partitions = bad_sort(partitions)
 
@@ -102,21 +115,7 @@ def node_deg_partitioning(G, n_partitions, k = 1):
 
     return partitions
 
-def clone_nodes(G, partitions, k, func):
-    '''Clones nodes to each partition. Each node is cloned k times 
-    and there isn't any partition with duplicate nodes. Each partition will have
-    approximately same number of nodes.'''
-
-    for node in list(G.nodes):
-        it = 0
-        while it < k:
-            id_min = func(G, partitions, node)
-            partitions[id_min].append(node)
-            it += 1
-
-    return partitions
-  
-def find_min_size_partition(G, partitions, node):
+def find_min_size_partition(partitions, node):
     '''Finds partition with minimum number of nodes 
     that doesn't have a given node in it. Returns id of that partition.'''
 
@@ -130,21 +129,13 @@ def find_min_size_partition(G, partitions, node):
 
     return id_min
 
-def find_min_node_deg_partition(G, partitions, node):
+def find_min_node_deg_partition(partitions, node, par_deg_sum):
     '''Finds partition with minimum of node degree
     that doesn't have a given node in it. Returns id of that partition.'''
 
     min_deg = 999999999
     id_min = -1
     
-    par_deg_sum = []
-    for _ in range(len(partitions)): par_deg_sum.append(0)
-
-    for ind, par in enumerate(partitions):
-        if par != []:
-            for n in par:
-                par_deg_sum[ind] += G.degree[n]
-
     for ind, s in enumerate(par_deg_sum):
         if min_deg >= s and node not in partitions[ind]:
             min_deg = s
