@@ -1,5 +1,7 @@
 #include "Worker.h"
 
+mutex Worker::mtx;
+
 Worker::Worker(int workerId, int numWorkers) {
 	this->id = workerId;
 	this->numWorkers = numWorkers;
@@ -16,6 +18,7 @@ Worker::Worker(int workerId, int numWorkers) {
 	this->workersSockAddr = vector<sockaddr_in>();
 	this->workConsensus = vector<bool>(this->numWorkers, false);
 	this->timeCheckpoints.push_back(0);
+	this->numMessages = 0;
 }
 
 void Worker::createAndBindSock(int type) {
@@ -123,6 +126,7 @@ void Worker::broadcastNodeInfo(Worker w) {
 	}
 	for (i = 0; i < w.getNumWorkers()-1; ++i) {
 		threads[i].join();
+		w.incNumMessages();
 	}
 }
 
@@ -162,7 +166,7 @@ void Worker::sendNodeInfoToWorker(Worker w, int workerId, int* data, int dataLen
 
 // ----------------------------------------------------------------------------------------------------------------
 
-vector<int> Worker::requestNodeNeighbors(Worker w, int node) {
+vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 	int workerId = 0;
 
 	// Searches which worker to contanct to request data
@@ -183,6 +187,9 @@ vector<int> Worker::requestNodeNeighbors(Worker w, int node) {
 	buffer[1] = node;
 
 	sendto(sock, (int*) buffer, sizeof(int)*2, 0, (sockaddr*) &addr, addrLen);
+
+	Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
+
 	int byteSize = recvfrom(sock, buffer, SIZE, 0, (sockaddr*) &addr, &addrLen);
 	int len = byteSize / sizeof(int);
 	close(sock);
@@ -207,6 +214,8 @@ void Worker::listenForRequest(Worker& w) {
 			case NEIGHREQ: {
 				tempVec = w.getNodes()[buffer[1]];
 				sendto(w.getSockfd(), tempVec.data(), tempVec.size() * sizeof(int), 0, (sockaddr*) &addr, addrLen);
+
+				Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
 			}; break;
 
 			case CONS: {
@@ -278,9 +287,9 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
-			cout << node << ": " << coeff << endl;
+			//cout << node << ": " << coeff << endl; // Debug
 			broadcastClusteringCoeffInfo(w, node, coeff);
-			cout << "Broadcast " << node << ": " << coeff << endl;
+			//cout << "Broadcast " << node << ": " << coeff << endl; // Debug
 		}
 	}
 }
@@ -320,6 +329,7 @@ bool Worker::broadcastWorkConsensus(Worker& w) {
 	}
 	for (i = 0; i < w.getNumWorkers() - 1; ++i) {
 		threads[i].join();
+		Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
 	}
 
 	return checkWorkConsensus(w);
@@ -336,7 +346,6 @@ void Worker::sendDataToWorker(Worker w, int workerId, int* data, int dataLen) {
 }
 
 bool Worker::checkWorkConsensus(Worker w) {
-
 	for (int i = 0; i < w.getNumWorkers(); ++i) {
 		if (!w.getWorkConsensus()[i]) {
 			return false;
@@ -365,6 +374,10 @@ int Worker::totalTime() {
 	return totalTime;
 }
 
+void Worker::incNumMessages(int val) {
+	numMessages += val;
+}
+
 void Worker::LogResults(Worker w, string path) {
 
 	ofstream file;
@@ -387,8 +400,9 @@ void Worker::LogResults(Worker w, string path) {
 	file << "Calculating time: " << w.getTimeCheckpoint()[2] << " ms" << endl;
 	file << "Consensus time: " << w.getTimeCheckpoint()[3] << " ms" << endl;
 	file << "Total time: " << w.totalTime() << " ms" << endl;
+	file << "\nTotal number of messages: " << w.getNumMessages() << endl;
 
 	file.close();
 
-	cout << "Worker " << w.getId() << " total time : " << w.totalTime() << " ms" << endl;
+	cout << "Worker " << w.getId() << " time and messages: " << w.totalTime() << " ms, " << w.getNumMessages() << " messages" << endl;
 }

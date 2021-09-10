@@ -14,7 +14,7 @@ using namespace std;
 
 string homeDir = getenv("HOME");
 
-string partitionsDir = "fb-pages-food/N3_K2/";
+string partitionsDir = "fb-pages-food/N5_K3/";
 string dataPath = homeDir + "/partitions/" + partitionsDir;
 string resultsPath = homeDir + "/results/" + partitionsDir;
 string ipFileName = homeDir + "/ip_addrs.txt";
@@ -27,6 +27,7 @@ int main(int argc, char* argv[])
 
     int id = atoi(argv[2]);
     int numWorkers = atoi(argv[1]);
+    mutex mtx;
 
     // Init phase
 
@@ -38,13 +39,11 @@ int main(int argc, char* argv[])
     // Worker broadcasts nodes that it has to other workers
     // and receives info about other nodes. TCP is used
 
-    cout << "Worker object created" << endl;
-
     thread broadcastNodeInfoTr(Worker::broadcastNodeInfo, w);
     Worker::recvNodeInfo(w);
     broadcastNodeInfoTr.join();
 
-    cout << "Node info broadcasted" << endl;
+    // cout << "Node info broadcasted" << endl; // Debug
     w.createAndBindSock(SOCK_DGRAM);
     sleep(2);
 
