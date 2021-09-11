@@ -14,7 +14,7 @@ using namespace std;
 
 string homeDir = getenv("HOME");
 
-string partitionsDir = "fb-pages-food/N5_K3/";
+string partitionsDir = "fb-pages-food/N3_K2/";
 string dataPath = homeDir + "/partitions/" + partitionsDir;
 string resultsPath = homeDir + "/results/" + partitionsDir;
 string ipFileName = homeDir + "/ip_addrs.txt";
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
     Worker::recvNodeInfo(w);
     broadcastNodeInfoTr.join();
 
-    // cout << "Node info broadcasted" << endl; // Debug
+    cout << "Node info broadcasted" << endl; // Debug
     w.createAndBindSock(SOCK_DGRAM);
     sleep(2);
 

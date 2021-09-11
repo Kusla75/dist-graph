@@ -1,6 +1,6 @@
 #!/bin/bash
 
-### This script is automates Worker.out execution
+### This script automates Worker.out execution, by finding where .out is stored
 ### It checks if machine architecture is ARM, ARM64 or x86_64
 
 machine_info=$(uname -a)

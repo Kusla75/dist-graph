@@ -8,6 +8,6 @@ ip_file=/home/nikola/ip_addrs.txt
 
 while read -r ip
 do
-    scp -r -q $dir/partitions/ $dir/py/ $dir/sh/ $dir/solutions/ $ip_file nikola@$ip:$dir/
+    scp -r -q $dir/projects $dir/partitions/ $dir/py/ $dir/sh/ $dir/solutions/ $ip_file nikola@$ip:$dir/
 
 done < $ip_file

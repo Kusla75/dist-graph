@@ -287,9 +287,9 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
-			//cout << node << ": " << coeff << endl; // Debug
+			cout << node << ": " << coeff << endl; // Debug
 			broadcastClusteringCoeffInfo(w, node, coeff);
-			//cout << "Broadcast " << node << ": " << coeff << endl; // Debug
+			cout << "Broadcast " << node << ": " << coeff << endl; // Debug
 		}
 	}
 }
