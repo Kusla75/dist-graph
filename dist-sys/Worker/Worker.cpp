@@ -287,9 +287,9 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
-			cout << node << ": " << coeff << endl; // Debug
+			//cout << node << ": " << coeff << endl; // Debug
 			broadcastClusteringCoeffInfo(w, node, coeff);
-			cout << "Broadcast " << node << ": " << coeff << endl; // Debug
+			//cout << "Broadcast " << node << ": " << coeff << endl; // Debug
 		}
 	}
 }
@@ -357,13 +357,17 @@ bool Worker::checkWorkConsensus(Worker w) {
 
 // ----------------------------------------------------------------------------------------------------------------
 
-void Worker::addTimeCheckpoint(chrono::steady_clock::time_point& startTime)
-{
+void Worker::addTimeCheckpoint(chrono::steady_clock::time_point& startTime){
+
+	int timeSum = 0;
+	for (int i = 0; i < timeCheckpoints.size(); ++i) {
+		timeSum += timeCheckpoints[i];
+	}
+
 	auto endTime = chrono::steady_clock::now();
 	int executionTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count();
 
-	int last = timeCheckpoints.back();
-	timeCheckpoints.push_back(executionTime - last);
+	timeCheckpoints.push_back(executionTime - timeSum);
 }
 
 int Worker::totalTime() {

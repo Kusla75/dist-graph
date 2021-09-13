@@ -21,6 +21,7 @@
 
 #define SIZE 8192
 #define FIX_PORT 50000
+#define SLEEP_PERIOD 200000
 
 #define NEIGHREQ 0		// requesting for node neighbors message
 #define CONS 1			// consensus message
