@@ -53,6 +53,25 @@ def read_dataset(G, dataset_path):
     return G
 
 def random_partitioning(G, n_partitions, k = 1):
+    
+    nodes_list = list(G.nodes)
+
+    random.seed(1616)
+    partitions = [ [] for _ in range(n_partitions) ]
+
+    for node in nodes_list:
+        r = random.randint(0, n_partitions-1)
+        partitions[r].append(node)
+
+    if k > 1:
+        pass
+
+    partitions = bad_sort(partitions)
+    partitions = create_partitions_dict(G, partitions)
+
+    return partitions
+
+def node_num_partitioning(G, n_partitions, k = 1):
     '''Gets list of nodes in a graph and creates a list of neighbors
     for every node. Using that list of graph partitions is created.
     

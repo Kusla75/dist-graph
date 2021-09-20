@@ -7,9 +7,9 @@ from partition import read_dataset
 
 G = nx.Graph()
 
-ds_file = 'soc-hamsterster.txt' # Name of file to save solution
+ds_file = 'socfb-mich.txt' # Name of file to save solution
 
-G = read_dataset(G, p.soc_hamsterster_path)
+G = read_dataset(G, p.socfb_mich)
 
 clustering_coeff_dic = nx.clustering(G)
 

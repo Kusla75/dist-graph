@@ -14,15 +14,17 @@ using namespace std;
 
 string homeDir = getenv("HOME");
 
-string partitionsDir = "fb-pages-food/N5_K3/";
-string dataPath = homeDir + "/partitions/" + partitionsDir;
-string resultsPath = homeDir + "/results/" + partitionsDir;
-string ipFileName = homeDir + "/ip_addrs.txt";
-
+// fb-pages-food/N4_K1_ ...
 //  Command-line arg: Number of workers, WorkerId, Other
 
 int main(int argc, char* argv[])
 {
+    string partitionsDir = argv[3];
+    string dataPath = homeDir + "/partitions/" + partitionsDir;
+    string resultsPath = homeDir + "/results/" + partitionsDir;
+    string ipFileName = homeDir + "/ip_addrs.txt";
+
+
     chrono::steady_clock::time_point startTime = chrono::steady_clock::now();
 
     int id = atoi(argv[2]);
@@ -43,9 +45,10 @@ int main(int argc, char* argv[])
     Worker::recvNodeInfo(w);
     broadcastNodeInfoTr.join();
 
-    cout << "Node info broadcasted" << endl; // Debug
     w.createAndBindSock(SOCK_DGRAM);
     usleep(SLEEP_PERIOD);
+
+    cout << "Node info broadcasted" << endl; // Debug
 
     w.addTimeCheckpoint(startTime);
     // ------------------
@@ -62,6 +65,7 @@ int main(int argc, char* argv[])
         w.addTimeCheckpoint(startTime);
         w.LogResults(w, resultsPath);
 
+        close(w.getSockfd());
         exit(EXIT_SUCCESS);
     }
 
@@ -69,4 +73,5 @@ int main(int argc, char* argv[])
 
     w.addTimeCheckpoint(startTime);
     w.LogResults(w, resultsPath);
+    close(w.getSockfd());
 }

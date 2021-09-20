@@ -8,7 +8,7 @@ import partition as par
 G = nx.Graph()
 edge = []
 
-ds_name = 'fb-pages-food' # dataset that will be used
+ds_name = 'socfb-caltech' # dataset that will be used
 
 n_partitions = 0 # number of partitions
 k = 0 # number of copies for every node 
@@ -21,8 +21,8 @@ if k != '':
 else:
     k = 1
 
-G = par.read_dataset(G, p.fb_pages_food_path)
+G = par.read_dataset(G, p.socfb_caltech_path)
 
-partitions = par.random_partitioning(G, n_partitions, k)
+partitions = par.node_num_partitioning(G, n_partitions, k)
 
 par.write_partitions(partitions, ds_name, n_partitions, k)
