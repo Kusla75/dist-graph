@@ -19,6 +19,7 @@ Worker::Worker(int workerId, int numWorkers) {
 	this->workConsensus = vector<bool>(this->numWorkers, false);
 	this->timeCheckpoints.push_back(0);
 	this->numMessages = 0;
+	this->stat = ACTIVE;
 }
 
 void Worker::createAndBindSock(int type) {
@@ -72,7 +73,7 @@ void Worker::setWorkersSockAddr(string ipFileName) {
 	}
 }
 
-void Worker::LoadNodesData(string path) {
+void Worker::loadNodesData(string path) {
 	string line;
 	int node = 0;
 	vector<int> nodeNeighbors;
@@ -101,6 +102,19 @@ void Worker::LoadNodesData(string path) {
 
 		clusteringCoeff.insert(pair<int, float>(node, -1));
 	}
+}
+
+void Worker::setSockOpt(int sock) {
+	struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = 100000; // 100 ms timeout
+	if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+		cout << "Socket option timeout error" << endl;
+	}
+}
+
+void Worker::setStatus(Status s) {
+	stat = s;
 }
 
 // ----------------------------------------------------------------------------------------------------------------
@@ -178,6 +192,7 @@ vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 	}
 
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	setSockOpt(sock);
 
 	sockaddr_in addr = w.getWorkersSockAddr()[workerId];
 	socklen_t addrLen = sizeof(addr);
@@ -190,7 +205,16 @@ vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 
 	Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
 
-	int byteSize = recvfrom(sock, buffer, SIZE, 0, (sockaddr*) &addr, &addrLen);
+	int byteSize = recvfrom(sock, buffer, SIZE, 0, (sockaddr*)&addr, &addrLen);
+
+	while (byteSize < 0) {
+		sendto(sock, (int*)buffer, sizeof(int) * 2, 0, (sockaddr*)&addr, addrLen);
+
+		Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
+
+		int byteSize = recvfrom(sock, buffer, SIZE, 0, (sockaddr*)&addr, &addrLen);
+	}
+
 	int len = byteSize / sizeof(int);
 	close(sock);
 
@@ -204,34 +228,45 @@ void Worker::listenForRequest(Worker& w) {
 	socklen_t addrLen = sizeof(addr);
 	vector<int> tempVec;
 	bool quit = false;
+	setSockOpt(w.getSockfd());
 
 	while (!quit) {
+
 		int byteSize = recvfrom(w.getSockfd(), buffer, SIZE, 0, (sockaddr*) &addr, &addrLen);
-		int len = byteSize / sizeof(int);
+		if (byteSize > 0) {
+			int len = byteSize / sizeof(int);
 
-		switch (buffer[0]) {
+			switch (buffer[0]) {
 
-			case NEIGHREQ: {
-				tempVec = w.getNodes()[buffer[1]];
-				sendto(w.getSockfd(), tempVec.data(), tempVec.size() * sizeof(int), 0, (sockaddr*) &addr, addrLen);
+				case NEIGHREQ: {
+					tempVec = w.getNodes()[buffer[1]];
+					sendto(w.getSockfd(), tempVec.data(), tempVec.size() * sizeof(int), 0, (sockaddr*)&addr, addrLen);
 
-				Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
-			}; break;
+					Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
+				}; break;
 
-			case CONS: {
-				w.getWorkConsensus()[buffer[1]] = true;
-				quit = checkWorkConsensus(w);
-			}; break;
+				case CONS: {
+					w.getWorkConsensus()[buffer[1]] = true;
+					quit = checkWorkConsensus(w);
+				}; break;
 
-			case CALCNODE: {
-				float clusteringCoeff;
-				memcpy(&clusteringCoeff, buffer + 2, sizeof(float));
+				case CALCNODE: {
+					float clusteringCoeff;
+					memcpy(&clusteringCoeff, buffer + 2, sizeof(float));
 
-				w.getClusteringCoeff()[buffer[1]] = clusteringCoeff;
+					w.getClusteringCoeff()[buffer[1]] = clusteringCoeff;
 
-			}; break;
+				}; break;
+
+			}
 		}
+		else {
+			quit = checkWorkConsensus(w);
+		}
+		
 	}
+
+	close(w.getSockfd());
 }
 
 void Worker::calculateClusteringCoeff(Worker& w) {
@@ -288,7 +323,7 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 
 			w.getClusteringCoeff()[node] = coeff;
 			//cout << node << ": " << coeff << endl; // Debug
-			broadcastClusteringCoeffInfo(w, node, coeff);
+			//broadcastClusteringCoeffInfo(w, node, coeff);
 			//cout << "Broadcast " << node << ": " << coeff << endl; // Debug
 		}
 	}

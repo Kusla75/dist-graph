@@ -27,6 +27,8 @@
 #define CONS 1			// consensus message
 #define CALCNODE 2		// message that holds clustering coeff of node calculated
 
+enum Status { ACTIVE, STOP, CRASH };
+
 using namespace std;
 
 class Worker
@@ -44,6 +46,7 @@ class Worker
 		vector<bool> workConsensus;					//
 		vector<int> timeCheckpoints;				// used for capturing execution time of each part of process
 		int numMessages;							// count total number of messages worker has sent
+		Status stat;
 	
 	public:
 		static mutex mtx;							// mutex is used so race condition wouldn't occur
@@ -61,10 +64,14 @@ class Worker
 		vector<bool>& getWorkConsensus() { return workConsensus; }
 		vector<int>& getTimeCheckpoint() { return timeCheckpoints; };
 		int getNumMessages() { return numMessages; }
+		Status getStatus() { return stat; }
+		void setStatus(Status s);
 
 		void createAndBindSock(int type);
 		void setWorkersSockAddr(string ipFileName);
-		void LoadNodesData(string path);
+		void loadNodesData(string path);
+
+		static void setSockOpt(int sock);
 
 		static void broadcastNodeInfo(Worker w);
 		static void recvNodeInfo(Worker& w);

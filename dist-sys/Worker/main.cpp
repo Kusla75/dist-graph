@@ -15,7 +15,7 @@ using namespace std;
 string homeDir = getenv("HOME");
 
 // fb-pages-food/N4_K1_ ...
-//  Command-line arg: Number of workers, WorkerId, Other
+//  Command-line arg: Number of workers, WorkerId, Partitions path, Other
 
 int main(int argc, char* argv[])
 {
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     Worker w(id, numWorkers);
     w.createAndBindSock(SOCK_STREAM);
     w.setWorkersSockAddr(ipFileName); // set sockaddr of other workers
-    w.LoadNodesData(dataPath); // load graph partition based on id
+    w.loadNodesData(dataPath); // load graph partition based on id
 
     // Worker broadcasts nodes that it has to other workers
     // and receives info about other nodes. TCP is used
@@ -60,18 +60,10 @@ int main(int argc, char* argv[])
     w.addTimeCheckpoint(startTime);
     cout << "Worker " << w.getId() << " calculating time: " << w.getTimeCheckpoint().back() << " ms" << endl;
 
-
-    if (Worker::broadcastWorkConsensus(w)) {
-        w.addTimeCheckpoint(startTime);
-        w.LogResults(w, resultsPath);
-
-        close(w.getSockfd());
-        exit(EXIT_SUCCESS);
-    }
+    Worker::broadcastWorkConsensus(w);
+    w.addTimeCheckpoint(startTime);
 
     listenForRequestTr.join();
 
-    w.addTimeCheckpoint(startTime);
     w.LogResults(w, resultsPath);
-    close(w.getSockfd());
 }
