@@ -2,7 +2,8 @@
 
 ### This script is used to init n workers in background
 ### First arg is numbe of workers
-### Second arg means which worker NOT to initialize
+### Second arg means which worker NOT to initialize (Used for debuging)
+### Third arg is partition data path
 
 exe_dir=~/projects/Worker/bin/x64/Debug
 

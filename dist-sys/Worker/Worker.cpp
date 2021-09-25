@@ -17,6 +17,7 @@ Worker::Worker(int workerId, int numWorkers) {
 
 	this->workersSockAddr = vector<sockaddr_in>();
 	this->workConsensus = vector<bool>(this->numWorkers, false);
+	this->workersStatus = vector<Status>(this->numWorkers, ACTIVE);
 	this->timeCheckpoints.push_back(0);
 	this->numMessages = 0;
 	this->stat = ACTIVE;
@@ -113,10 +114,6 @@ void Worker::setSockOpt(int sock) {
 	}
 }
 
-void Worker::setStatus(Status s) {
-	stat = s;
-}
-
 // ----------------------------------------------------------------------------------------------------------------
 
 void Worker::broadcastNodeInfo(Worker w) {
@@ -182,41 +179,51 @@ void Worker::sendNodeInfoToWorker(Worker w, int workerId, int* data, int dataLen
 
 vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 	int workerId = 0;
+	vector<int> workersVec;
+	bool faultDetection = false;
 
-	// Searches which worker to contanct to request data
+	// Searches which workers to contanct to request data
 	for (auto pair : w.getOtherWorkersNodes()) {
-		if (binary_search(pair.second.begin(), pair.second.end(), node)) {
-			workerId = pair.first;
-			break;
+		workerId = pair.first;
+
+		if (binary_search(pair.second.begin(), pair.second.end(), node) && w.getWorkersStatus()[workerId] == ACTIVE) {
+			workersVec.push_back(workerId);
 		}
 	}
+
+	int buffer[SIZE];
+	int byteSize, len;
 
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 	setSockOpt(sock);
 
-	sockaddr_in addr = w.getWorkersSockAddr()[workerId];
-	socklen_t addrLen = sizeof(addr);
+	for (int workerId : workersVec) {
+		sockaddr_in addr = w.getWorkersSockAddr()[workerId];
+		socklen_t addrLen = sizeof(addr);
 
-	int buffer[SIZE];
-	buffer[0] = NEIGHREQ;
-	buffer[1] = node;
-
-	sendto(sock, (int*) buffer, sizeof(int)*2, 0, (sockaddr*) &addr, addrLen);
-
-	Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
-
-	int byteSize = recvfrom(sock, buffer, SIZE, 0, (sockaddr*)&addr, &addrLen);
-
-	while (byteSize < 0) {
+		buffer[0] = NEIGHREQ;
+		buffer[1] = node;
 		sendto(sock, (int*)buffer, sizeof(int) * 2, 0, (sockaddr*)&addr, addrLen);
 
 		Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
 
-		int byteSize = recvfrom(sock, buffer, SIZE, 0, (sockaddr*)&addr, &addrLen);
+		byteSize = recvfrom(sock, buffer, SIZE, 0, (sockaddr*)&addr, &addrLen);
+		
+		if (byteSize > 0) {
+			len = byteSize / sizeof(int);
+			break;
+		}
+		else {
+			faultDetection = true;
+			w.getWorkersStatus()[workerId] = CRASH;
+		}
 	}
 
-	int len = byteSize / sizeof(int);
 	close(sock);
+
+	if (faultDetection) {
+		broadcastWorkersStatus(w);
+	}
 
 	vector<int> nodeNeighbors(buffer, buffer + len);
 	return nodeNeighbors;
@@ -230,7 +237,7 @@ void Worker::listenForRequest(Worker& w) {
 	bool quit = false;
 	setSockOpt(w.getSockfd());
 
-	while (!quit) {
+	while (!quit && w.getStatus() != CRASH) {
 
 		int byteSize = recvfrom(w.getSockfd(), buffer, SIZE, 0, (sockaddr*) &addr, &addrLen);
 		if (byteSize > 0) {
@@ -258,6 +265,12 @@ void Worker::listenForRequest(Worker& w) {
 
 				}; break;
 
+				case STATUS: {
+					for (int i = 0; i < w.getWorkersStatus().size(); ++i) {
+						w.getWorkersStatus()[i] = static_cast<Status>(buffer[i+1]);
+					}
+				}; break;
+
 			}
 		}
 		else {
@@ -269,7 +282,7 @@ void Worker::listenForRequest(Worker& w) {
 	close(w.getSockfd());
 }
 
-void Worker::calculateClusteringCoeff(Worker& w) {
+int Worker::calculateClusteringCoeff(Worker& w, int faultCounter) {
 	int node;
 	int neighbor;
 	int neighborsEdges = 0;
@@ -277,6 +290,7 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 	float coeff = 0;
 	int totalneighborEdges = 0;
 	vector<int> neighborNeighbors;
+	int counter = 0;
 
 	for (auto pr : w.getNodes()) {
 		node = pr.first;
@@ -322,6 +336,15 @@ void Worker::calculateClusteringCoeff(Worker& w) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
+
+			if (faultCounter > 0) {
+				counter++;
+				if (counter >= faultCounter) {
+					w.getStatus() = CRASH;
+					return -1;
+				}
+			}
+
 			//cout << node << ": " << coeff << endl; // Debug
 			//broadcastClusteringCoeffInfo(w, node, coeff);
 			//cout << "Broadcast " << node << ": " << coeff << endl; // Debug
@@ -339,12 +362,33 @@ void Worker::broadcastClusteringCoeffInfo(Worker& w, int node, float clusteringC
 	memcpy(buffer+2, &clusteringCoeff, sizeof(float));
 
 	for (i = 0; i < w.getNumWorkers(); ++i) {
-		if (i != w.getId()) {
+		if (i != w.getId() && w.getWorkersStatus()[i] == ACTIVE) {
 			threads.push_back(thread(Worker::sendDataToWorker, w, i, &buffer[0], sizeof(int) * 3));
 		}
 	}
-	for (i = 0; i < w.getNumWorkers() - 1; ++i) {
+	for (i = 0; i < threads.size(); ++i) {
 		threads[i].join();
+		Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
+	}
+}
+
+void Worker::broadcastWorkersStatus(Worker& w) {
+	int i;
+	vector<thread> threads;
+
+	int size = w.getNumWorkers();
+	int buffer[size+1];
+	buffer[0] = STATUS;
+	copy(w.getWorkersStatus().begin(), w.getWorkersStatus().end(), buffer);
+
+	for (i = 0; i < w.getNumWorkers(); ++i) {
+		if (i != w.getId() && w.getWorkersStatus()[i] == ACTIVE) {
+			threads.push_back(thread(Worker::sendDataToWorker, w, i, &buffer[0], sizeof(int) * size));
+		}
+	}
+	for (i = 0; i < threads.size(); ++i) {
+		threads[i].join();
+		Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
 	}
 }
 
@@ -358,11 +402,11 @@ bool Worker::broadcastWorkConsensus(Worker& w) {
 	buffer[1] = w.getId();
 
 	for (i = 0; i < w.getNumWorkers(); ++i) {
-		if (i != w.getId()) {
+		if (i != w.getId() && w.getWorkersStatus()[i] == ACTIVE) {
 			threads.push_back(thread(Worker::sendDataToWorker, w, i, &buffer[0], sizeof(int) * 2));
 		}
 	}
-	for (i = 0; i < w.getNumWorkers() - 1; ++i) {
+	for (i = 0; i < threads.size(); ++i) {
 		threads[i].join();
 		Worker::mtx.lock(); w.incNumMessages(); Worker::mtx.unlock();
 	}
@@ -382,7 +426,7 @@ void Worker::sendDataToWorker(Worker w, int workerId, int* data, int dataLen) {
 
 bool Worker::checkWorkConsensus(Worker w) {
 	for (int i = 0; i < w.getNumWorkers(); ++i) {
-		if (!w.getWorkConsensus()[i]) {
+		if (!w.getWorkConsensus()[i] && w.getWorkersStatus()[i] == ACTIVE) {
 			return false;
 		}
 	}
@@ -394,10 +438,7 @@ bool Worker::checkWorkConsensus(Worker w) {
 
 void Worker::addTimeCheckpoint(chrono::steady_clock::time_point& startTime){
 
-	int timeSum = 0;
-	for (int i = 0; i < timeCheckpoints.size(); ++i) {
-		timeSum += timeCheckpoints[i];
-	}
+	int timeSum = totalTime();
 
 	auto endTime = chrono::steady_clock::now();
 	int executionTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count();
@@ -428,7 +469,7 @@ void Worker::LogResults(Worker w, string path) {
 	file.open(fileName);
 	for (auto pair : w.getClusteringCoeff()) {
 		ostringstream stream;
-		stream << setprecision(8) << pair.second;
+		stream << setprecision(12) << pair.second;
 		file << to_string(pair.first) << ": " << stream.str() << endl;
 	}
 	file.close();

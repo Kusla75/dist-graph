@@ -1,3 +1,7 @@
 #!/bin/bash
 
-scp -r -q ~/results/ nikola@192.168.0.21:/home/nikola/
+### Used for copying results back to main machine
+
+main_machine=nikola@192.168.0.21
+
+scp -r -q ~/results/ $main_machine:/home/nikola/

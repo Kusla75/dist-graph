@@ -31,7 +31,7 @@ def load_data(f):
             line = line.split(":")
 
             flt = float(line[1])
-            dic[line[0]] = round(flt, 5)
+            dic[line[0]] = round(flt, 10)
 
     return dic
 
@@ -39,7 +39,7 @@ def verify(res_dic, sol_dic):
     error_nodes = []
 
     for key, val in res_dic.items():
-        if val != sol_dic[key]:
+        if abs(val - sol_dic[key]) > 1e-7:
             error_nodes.append(key)
 
     return error_nodes

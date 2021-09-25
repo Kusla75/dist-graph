@@ -1,5 +1,7 @@
 #!/bin/bash
 
+### Initializes workers remotly using ssh
+
 # 192.168.0.21 - Main PC
 # 192.168.0.11 - Laptop
 # 192.168.0.26 - Raspberry

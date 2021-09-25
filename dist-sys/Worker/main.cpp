@@ -15,7 +15,7 @@ using namespace std;
 string homeDir = getenv("HOME");
 
 // fb-pages-food/N4_K1_ ...
-//  Command-line arg: Number of workers, WorkerId, Partitions path, Other
+//  Command-line arg: Number of workers, WorkerId, Partitions path, fault parameter
 
 int main(int argc, char* argv[])
 {
@@ -29,7 +29,12 @@ int main(int argc, char* argv[])
 
     int id = atoi(argv[2]);
     int numWorkers = atoi(argv[1]);
+    int faultCounter = 0;
     mutex mtx;
+
+    if (argc > 4) {
+        faultCounter = atoi(argv[4]);
+    }
 
     // Init phase
 
@@ -55,15 +60,21 @@ int main(int argc, char* argv[])
 
     thread listenForRequestTr(Worker::listenForRequest, ref(w));
     
-    Worker::calculateClusteringCoeff(w);
+    Worker::calculateClusteringCoeff(w, faultCounter);
 
-    w.addTimeCheckpoint(startTime);
-    cout << "Worker " << w.getId() << " calculating time: " << w.getTimeCheckpoint().back() << " ms" << endl;
+    if (w.getStatus() != CRASH) {
+        w.addTimeCheckpoint(startTime);
+        cout << "Worker " << w.getId() << " calculating time: " << w.getTimeCheckpoint().back() << " ms" << endl;
 
-    Worker::broadcastWorkConsensus(w);
-    w.addTimeCheckpoint(startTime);
+        Worker::broadcastWorkConsensus(w);
+        w.addTimeCheckpoint(startTime);
 
-    listenForRequestTr.join();
+        listenForRequestTr.join();
 
-    w.LogResults(w, resultsPath);
+        w.LogResults(w, resultsPath);
+    }
+    else {
+        listenForRequestTr.join();
+        cout << "Worker " << w.getId() << " CRASHED!" << endl;
+    }
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-### This script is used to copy partitions for workers, shell and python scripts
+### This script is used to copy partitions for workers, shell scripts, python scripts and other data
 
 repo=/mnt/c/Users/Nikola/Desktop/dist-graph
 dest=~/
@@ -17,4 +17,4 @@ cp -rf $src $dest
 src=$repo/solutions
 cp -rf $src $dest
 
-cp -rf $repo/*.txt $dest
+cp -rf $repo/ip_addrs.txt $dest
