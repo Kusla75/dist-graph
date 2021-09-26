@@ -336,6 +336,7 @@ int Worker::calculateClusteringCoeff(Worker& w, int faultCounter) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
+			broadcastClusteringCoeffInfo(w, node, coeff);
 
 			if (faultCounter > 0) {
 				counter++;
@@ -346,7 +347,6 @@ int Worker::calculateClusteringCoeff(Worker& w, int faultCounter) {
 			}
 
 			//cout << node << ": " << coeff << endl; // Debug
-			//broadcastClusteringCoeffInfo(w, node, coeff);
 			//cout << "Broadcast " << node << ": " << coeff << endl; // Debug
 		}
 	}
@@ -379,7 +379,7 @@ void Worker::broadcastWorkersStatus(Worker& w) {
 	int size = w.getNumWorkers();
 	int buffer[size+1];
 	buffer[0] = STATUS;
-	copy(w.getWorkersStatus().begin(), w.getWorkersStatus().end(), buffer);
+	copy(w.getWorkersStatus().begin(), w.getWorkersStatus().end(), buffer+1);
 
 	for (i = 0; i < w.getNumWorkers(); ++i) {
 		if (i != w.getId() && w.getWorkersStatus()[i] == ACTIVE) {
@@ -458,7 +458,7 @@ void Worker::incNumMessages(int val) {
 	numMessages += val;
 }
 
-void Worker::LogResults(Worker w, string path) {
+void Worker::logResults(Worker w, string path) {
 
 	ofstream file;
 	string fileName = path + to_string(w.getId()) + "_res.txt";

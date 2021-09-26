@@ -28,7 +28,7 @@
 #define CALCNODE 2		// message that holds clustering coeff of node calculated
 #define STATUS 3		// message holding status of other workers
 
-enum Status { ACTIVE = 0, CRASH = 1, STOP = 2 };
+enum Status { ACTIVE = 0, CRASH = 1, CRASH_RECOVERY = 2 };
 
 using namespace std;
 
@@ -91,5 +91,5 @@ class Worker
 		void addTimeCheckpoint(chrono::steady_clock::time_point& startTime);
 		int totalTime();
 		void incNumMessages(int val = 1);
-		static void LogResults(Worker w, string path);
+		static void logResults(Worker w, string path);
 };

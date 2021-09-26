@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     w.createAndBindSock(SOCK_DGRAM);
     usleep(SLEEP_PERIOD);
 
-    cout << "Node info broadcasted" << endl; // Debug
+    cout << "Worker " << w.getId() << " node info broadcasted" << endl; // Debug
 
     w.addTimeCheckpoint(startTime);
     // ------------------
@@ -71,10 +71,14 @@ int main(int argc, char* argv[])
 
         listenForRequestTr.join();
 
-        w.LogResults(w, resultsPath);
+        w.logResults(w, resultsPath);
     }
     else {
+        w.addTimeCheckpoint(startTime);
+
         listenForRequestTr.join();
+
         cout << "Worker " << w.getId() << " CRASHED!" << endl;
+        w.logResults(w, resultsPath);
     }
 }

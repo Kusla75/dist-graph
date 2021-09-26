@@ -39,7 +39,7 @@ def verify(res_dic, sol_dic):
     error_nodes = []
 
     for key, val in res_dic.items():
-        if abs(val - sol_dic[key]) > 1e-7:
+        if abs(val - sol_dic[key]) > 1e-7 and val != -1:
             error_nodes.append(key)
 
     return error_nodes
