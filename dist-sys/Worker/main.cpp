@@ -24,7 +24,6 @@ int main(int argc, char* argv[])
     string resultsPath = homeDir + "/results/" + partitionsDir;
     string ipFileName = homeDir + "/ip_addrs.txt";
 
-
     chrono::steady_clock::time_point startTime = chrono::steady_clock::now();
 
     int id = atoi(argv[2]);
@@ -42,7 +41,7 @@ int main(int argc, char* argv[])
     w.createAndBindSock(SOCK_STREAM);
     w.setWorkersSockAddr(ipFileName); // set sockaddr of other workers
     w.loadNodesData(dataPath); // load graph partition based on id
-
+    
     // Worker broadcasts nodes that it has to other workers
     // and receives info about other nodes. TCP is used
 
@@ -54,7 +53,7 @@ int main(int argc, char* argv[])
     usleep(SLEEP_PERIOD);
 
     cout << "Worker " << w.getId() << " node info broadcasted" << endl; // Debug
-
+    
     w.addTimeCheckpoint(startTime);
     // ------------------
 

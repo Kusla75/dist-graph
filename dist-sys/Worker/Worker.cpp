@@ -105,12 +105,12 @@ void Worker::loadNodesData(string path) {
 	}
 }
 
-void Worker::setSockOpt(int sock) {
+void Worker::setSockOpt(int sock, int sec, int microsec) {
 	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = 100000; // 100 ms timeout
+	tv.tv_sec = sec;
+	tv.tv_usec = microsec;
 	if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-		cout << "Socket option timeout error" << endl;
+		cout << "Socket option timeout error " << errno << endl;
 	}
 }
 
@@ -135,16 +135,17 @@ void Worker::broadcastNodeInfo(Worker w) {
 			threads.push_back(thread(Worker::sendNodeInfoToWorker, ref(w), i, &buffer[0], len*sizeof(int)));
 		}
 	}
-	for (i = 0; i < w.getNumWorkers()-1; ++i) {
+	for (i = 0; i < threads.size(); ++i) {
 		threads[i].join();
 		w.incNumMessages();
 	}
 }
 
 void Worker::recvNodeInfo(Worker& w) {
-	int buffer[SIZE];
+	int buffer[SIZE/sizeof(int)];
 	sockaddr_in addr;
 	socklen_t addrLen = sizeof(sockaddr_in);
+	vector<int>* tempVec;
 	int sock;
 
 	listen(w.getSockfd(), 5);
@@ -154,10 +155,11 @@ void Worker::recvNodeInfo(Worker& w) {
 		int byteSize = recv(sock, buffer, SIZE, 0);
 		int len = byteSize / sizeof(int);
 
-		vector<int> tempVec(buffer + 1, buffer + len);
-		sort(tempVec.begin(), tempVec.end());
+		tempVec = new vector<int>(buffer + 1, buffer + len);
+		sort(tempVec->begin(), tempVec->end());
 
-		w.getOtherWorkersNodes().insert(pair<int, vector<int>>(buffer[0], tempVec));
+		w.getOtherWorkersNodes().insert(pair<int, vector<int>>(buffer[0], *tempVec));
+		delete tempVec;
 
 		close(sock);
 	}
@@ -179,7 +181,7 @@ void Worker::sendNodeInfoToWorker(Worker w, int workerId, int* data, int dataLen
 
 vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 	int workerId = 0;
-	vector<int> workersVec;
+	vector<int> workersVec, nodeNeighbors;
 	bool faultDetection = false;
 
 	// Searches which workers to contanct to request data
@@ -191,11 +193,11 @@ vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 		}
 	}
 
-	int buffer[SIZE];
-	int byteSize, len;
+	int buffer[SIZE/sizeof(int)];
+	int byteSize, len = 0;
 
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
-	setSockOpt(sock);
+	setSockOpt(sock, 2, 0);
 
 	for (int workerId : workersVec) {
 		sockaddr_in addr = w.getWorkersSockAddr()[workerId];
@@ -211,11 +213,13 @@ vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 		
 		if (byteSize > 0) {
 			len = byteSize / sizeof(int);
+			nodeNeighbors = vector<int>(buffer, buffer + len);
 			break;
 		}
 		else {
 			faultDetection = true;
 			w.getWorkersStatus()[workerId] = CRASH;
+			cout << "Couldn't reach worker " << workerId << "" << endl;
 		}
 	}
 
@@ -225,17 +229,16 @@ vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 		broadcastWorkersStatus(w);
 	}
 
-	vector<int> nodeNeighbors(buffer, buffer + len);
 	return nodeNeighbors;
 }
 
 void Worker::listenForRequest(Worker& w) {
-	int buffer[SIZE];
+	int buffer[SIZE/sizeof(int)];
 	sockaddr_in addr;
 	socklen_t addrLen = sizeof(addr);
 	vector<int> tempVec;
 	bool quit = false;
-	setSockOpt(w.getSockfd());
+	setSockOpt(w.getSockfd(), 0, 500000);
 
 	while (!quit && w.getStatus() != CRASH) {
 
@@ -336,7 +339,7 @@ int Worker::calculateClusteringCoeff(Worker& w, int faultCounter) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
-			broadcastClusteringCoeffInfo(w, node, coeff);
+			//broadcastClusteringCoeffInfo(w, node, coeff);
 
 			if (faultCounter > 0) {
 				counter++;

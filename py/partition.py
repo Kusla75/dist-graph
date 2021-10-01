@@ -162,7 +162,7 @@ def find_min_node_deg_partition(partitions, node, par_deg_sum):
 
     return id_min
 
-def write_partitions(partitions, ds_name, n_partitions, k):
+def write_partitions(partitions, ds_name, part_method, n_partitions, k):
     '''Saves every partition to different file, labeled with different id'''
 
     path = os.path.dirname(__file__)
@@ -175,7 +175,7 @@ def write_partitions(partitions, ds_name, n_partitions, k):
     f_line = ""
 
     dir_name = path + "\\N" + str(n_partitions) + "_"
-    dir_name += "K" + str(k) + '\\'
+    dir_name += "K" + str(k) + "_" + part_method + "\\"
     if not os.path.exists(dir_name):
         os.mkdir(dir_name)
 

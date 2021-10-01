@@ -73,7 +73,7 @@ class Worker
 		void setWorkersSockAddr(string ipFileName);
 		void loadNodesData(string path);
 
-		static void setSockOpt(int sock);
+		static void setSockOpt(int sock, int sec, int microsec);
 
 		static void broadcastNodeInfo(Worker w);
 		static void recvNodeInfo(Worker& w);
