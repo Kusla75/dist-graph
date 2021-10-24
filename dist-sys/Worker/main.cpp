@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     w.createAndBindSock(SOCK_DGRAM);
     usleep(SLEEP_PERIOD);
 
-    cout << "Worker " << w.getId() << " node info broadcasted" << endl; // Debug
+    cout << "ID: " << w.getId() << " - node info broadcasted" << endl; // Debug
     
     w.addTimeCheckpoint(startTime);
     // ------------------
@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 
     if (w.getStatus() != CRASH) {
         w.addTimeCheckpoint(startTime);
-        cout << "Worker " << w.getId() << " calculating time: " << w.getTimeCheckpoint().back() << " ms" << endl;
+        cout << "ID: " << w.getId() << " - calculating time: " << w.getTimeCheckpoint().back() << " ms" << endl;
 
         Worker::broadcastWorkConsensus(w);
         w.addTimeCheckpoint(startTime);
@@ -71,13 +71,14 @@ int main(int argc, char* argv[])
         listenForRequestTr.join();
 
         w.logResults(w, resultsPath);
+        cout << "ID: " << w.getId() << " - shutdown" << endl;
     }
     else {
         w.addTimeCheckpoint(startTime);
 
         listenForRequestTr.join();
 
-        cout << "Worker " << w.getId() << " CRASHED!" << endl;
         w.logResults(w, resultsPath);
+        cout << "ID: " << w.getId() << " - CRASHED!" << endl;
     }
 }

@@ -28,13 +28,13 @@ void Worker::createAndBindSock(int type) {
 
 	sockfd = socket(AF_INET, type, 0);
 	if (sockfd == 0) {
-		cout << "Socket creation failed" << endl;
+		cout << "ID: " << id <<" - socket creation failed" << endl;
 		exit(EXIT_FAILURE);
 	}
 
 	int bindStatus = ::bind(sockfd, (sockaddr*)&sockAddr, sizeof(sockAddr));
 	if (bindStatus < 0) {
-		cout << "Binding failed" << endl;
+		cout << "ID: " << id << " - binding failed" << endl;
 		exit(EXIT_FAILURE);
 	}
 }
@@ -66,7 +66,7 @@ void Worker::setWorkersSockAddr(string ipFileName) {
 
 		if (inet_pton(AF_INET, ipAddr[i].c_str(), &addrTmp.sin_addr) <= 0)
 		{
-			cout << "Invalid address for " << i << " worker" << endl;
+			cout << "ID: " << id << " - invalid address for " << i << " worker" << endl;
 			exit(EXIT_FAILURE);
 		}
 
@@ -110,7 +110,7 @@ void Worker::setSockOpt(int sock, int sec, int microsec) {
 	tv.tv_sec = sec;
 	tv.tv_usec = microsec;
 	if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-		cout << "Socket option timeout error " << errno << endl;
+		cout << "ID: " << id << " - socket option timeout error " << errno << endl;
 	}
 }
 
@@ -197,7 +197,7 @@ vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 	int byteSize, len = 0;
 
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
-	setSockOpt(sock, 2, 0);
+	//w.setSockOpt(sock, 10, 0);
 
 	for (int workerId : workersVec) {
 		sockaddr_in addr = w.getWorkersSockAddr()[workerId];
@@ -219,7 +219,7 @@ vector<int> Worker::requestNodeNeighbors(Worker& w, int node) {
 		else {
 			faultDetection = true;
 			w.getWorkersStatus()[workerId] = CRASH;
-			cout << "Couldn't reach worker " << workerId << "" << endl;
+			cout << "ID: " << w.getId() << " - couldn't reach worker " << workerId << "" << endl;
 		}
 	}
 
@@ -238,14 +238,12 @@ void Worker::listenForRequest(Worker& w) {
 	socklen_t addrLen = sizeof(addr);
 	vector<int> tempVec;
 	bool quit = false;
-	setSockOpt(w.getSockfd(), 0, 500000);
+	w.setSockOpt(w.getSockfd(), 0, 250000);
 
 	while (!quit && w.getStatus() != CRASH) {
 
 		int byteSize = recvfrom(w.getSockfd(), buffer, SIZE, 0, (sockaddr*) &addr, &addrLen);
 		if (byteSize > 0) {
-			int len = byteSize / sizeof(int);
-
 			switch (buffer[0]) {
 
 				case NEIGHREQ: {
@@ -339,7 +337,7 @@ int Worker::calculateClusteringCoeff(Worker& w, int faultCounter) {
 			}
 
 			w.getClusteringCoeff()[node] = coeff;
-			//broadcastClusteringCoeffInfo(w, node, coeff);
+			broadcastClusteringCoeffInfo(w, node, coeff);
 
 			if (faultCounter > 0) {
 				counter++;
@@ -349,8 +347,7 @@ int Worker::calculateClusteringCoeff(Worker& w, int faultCounter) {
 				}
 			}
 
-			//cout << node << ": " << coeff << endl; // Debug
-			//cout << "Broadcast " << node << ": " << coeff << endl; // Debug
+			//cout << "ID: " << w.getId() << " - " << node << ": " << coeff << endl; // Debug
 		}
 	}
 }
@@ -487,5 +484,5 @@ void Worker::logResults(Worker w, string path) {
 
 	file.close();
 
-	cout << "Worker " << w.getId() << " time and messages: " << w.totalTime() << " ms, " << w.getNumMessages() << " messages" << endl;
+	cout << "ID: " << w.getId() << " - time and messages: " << w.totalTime() << " ms, " << w.getNumMessages() << " messages" << endl;
 }

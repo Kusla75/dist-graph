@@ -3,15 +3,18 @@
 ### Initializes workers remotly using ssh
 
 # 192.168.0.21 - Main PC
-# 192.168.0.17 - Laptop
-# 192.168.0.26 - Raspberry
-# 192.168.0.10 - Phone
+# 192.168.0.22 - Laptop
+# 192.168.0.23 - Raspberry
+# 192.168.0.24 - Phone
 
 sshpass_cmd="sshpass -p nikola123"
-exe_cmd="sh/worker.sh 4"
+num_workers="4" # <------- CHANGE
 
-data_directory=socfb-caltech/N4_K1_rand/ # <-------
+data_directory=fb-pages-food/N4_K2_rand/ # <------- CHANGE
 
-$exe_cmd 0 $data_directory &
-$sshpass_cmd ssh nikola@192.168.0.17 $exe_cmd 1 $data_directory &
-$sshpass_cmd ssh nikola@192.168.0.26 $exe_cmd 2 $data_directory &
+# Local machine init
+sh/worker.sh $num_workers 0 $data_directory &
+# Remote machine init
+$sshpass_cmd ssh nikola@192.168.0.22 sh/worker.sh $num_workers 1 $data_directory &
+$sshpass_cmd ssh nikola@192.168.0.23 sh/worker.sh $num_workers 2 $data_directory &
+$sshpass_cmd ssh nikola@192.168.0.24 -p 8022 sh/worker.sh $num_workers 3 $data_directory &

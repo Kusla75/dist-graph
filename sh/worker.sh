@@ -3,8 +3,10 @@
 ### This script automates Worker.out execution, by finding where .out is stored
 ### It checks if machine architecture is ARM, ARM64 or x86_64
 
+### Arguments: number of workers, WorkerID, partition name, fault parameter
+
 machine_info=$(uname -a)
-exe_dir=~/projects/Worker/bin/
+exe_dir=~/projects/Worker/bin
 
 if [[ $machine_info =~ "arm" ]]
 then

@@ -8,11 +8,11 @@ import partition as par
 G = nx.Graph()
 edge = []
 
-ds_name = 'socfb-caltech' # dataset that will be used
+ds_name = 'fb-pages-food' # dataset that will be used
 n_partitions = 0 # number of partitions
 k = 0 # number of copies for every node 
 
-G = par.read_dataset(G, p.socfb_caltech_path)
+G = par.read_dataset(G, p.fb_pages_food_path)
 
 n_partitions = input("Num of partitions: ")
 n_partitions = int(n_partitions)
